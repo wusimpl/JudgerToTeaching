@@ -5,13 +5,14 @@
 #ifndef JUDGERTOTEACHING_DEBUG_H
 #define JUDGERTOTEACHING_DEBUG_H
 #include <iostream>
-using std::cout;
 using std::endl;
+using std::cout;
 
+#ifndef DEBUG
+#define DEBUG_PRINT(x)
+#endif
 #ifdef DEBUG
-    DEBUGPRINT(x) cout<<x<<endl;
-else
-    DEBUGPRINT(x)
+#define DEBUG_PRINT(x) cout<<x<<endl;
 #endif
 
 #endif //JUDGERTOTEACHING_DEBUG_H

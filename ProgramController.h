@@ -1,0 +1,14 @@
+//
+// Created by rory on 2021/3/6.
+//
+
+#ifndef JUDGERTOTEACHING_PROGRAMCONTROLLER_H
+#define JUDGERTOTEACHING_PROGRAMCONTROLLER_H
+
+
+class ProgramController {
+
+};
+
+
+#endif //JUDGERTOTEACHING_PROGRAMCONTROLLER_H
