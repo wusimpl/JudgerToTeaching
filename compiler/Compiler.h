@@ -9,7 +9,6 @@
 
 #include "../utils/util.h"
 
-
 class Compiler {
 protected:
     JudgeConfig* cfg{};
@@ -38,6 +37,14 @@ public:
         this->cfg = config;
     }
 
+    virtual ~Compiler()= default;
+    /**
+     * 编译源文件，若编译成功，cfg的exePath会被赋值
+     * @param compileInfo 编译信息会输出到此参数
+     * @return 编译结果，具体含义请查看结构体定义
+     */
+    virtual  CompileResult compile() const = 0;
+
 protected:
     /**
      * 生成相关编译器编译命令
@@ -45,13 +52,7 @@ protected:
      */
     virtual string generateCompileCommand() const =0;
 
-public:
-    /**
-     * 编译源文件，若编译成功，cfg的exePath会被赋值
-     * @param compileInfo 编译信息会输出到此参数
-     * @return 编译结果，具体含义请查看结构体定义
-     */
-    virtual  CompileResult compile() const = 0;
+
 
 };
 

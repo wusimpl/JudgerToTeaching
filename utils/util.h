@@ -10,13 +10,42 @@
 #include <ios>
 #include <stdio.h>
 #include <cstring>
+#include <map>
 #include "debug.h"
 using std::string;
 using std::fstream;
 using std::getline;
 
+#ifndef CONFIG_PATH
+#define CONFIG_PATH "~/.Judge/config.ini"
+#endif
+
+/**
+ * 源代码类型
+ */
+enum SourceFileType{
+    none=0,
+    c,
+    cpp,
+    java,
+    py,
+};
+
 string static getCurrentFormattedTime();
 int static execShellCommand(const string& cmd,string& output);
+SourceFileType static getExternalName(const string& fileName);
+
+/**
+ * 源代码类型映射
+ */
+static std::map<string,int> SourceFileTypeMap = {
+        {"c",SourceFileType::c},
+        {"cc",SourceFileType::cpp},
+        {"cpp",SourceFileType::cpp},
+        {"java",SourceFileType::java},
+        {"py",SourceFileType::py}
+};
+
 
 /**
  * 评判结果
@@ -147,15 +176,16 @@ public:
  */
 class JudgeConfig{
 public:
-    JudgeConfig(){
+    JudgeConfig(string configPath){
 //        srcPath  = "";
 
         string currentTime = getCurrentFormattedTime();
 
         //读取配置文件
         ConfigurationTool configurationTool;
-        bool success = configurationTool.load("/etc/JudgerToTeaching/config.ini");
+        bool success = configurationTool.load(configPath);
         if(!success){
+            DEBUG_PRINT("配置文件加载错误!\n");
             return;
         }
         string __outputFilepath;
@@ -183,9 +213,10 @@ public:
         judgeResult = NONE;
     }
 
-    string srcPath; //源代码文件路径
-    string exePath; //可执行文件路径
+    string srcPath; //源代码文件全路径
+    string exePath; //可执行文件全路径
     string outputFilePath; //输出文件路径(重定向被测程序的stdout到outputFilePath)
+    SourceFileType fileType; //源文件类型，帮助调用相应编译器
 
     int* sysCallList; //系统调用名单，与filterMode搭配使用
     bool filterMode; //true：白名单模式 false：黑名单模式
@@ -244,10 +275,19 @@ int static execShellCommand(const string& cmd,string& output){
     return 0;
 }
 
-
-
-
-
-
+/**
+ * 获取文件的扩展名
+ * @param fileName 文件名
+ * @return
+ */
+SourceFileType static getExternalName(const string& fileName){
+    int dotPosition = fileName.find_last_of(".");
+    if (dotPosition == string::npos){ //未找到.
+        DEBUG_PRINT("无法获取文件扩展名!\n");
+        return SourceFileType::none;
+    }
+    string suffix = fileName.substr(dotPosition+1,fileName.length()-dotPosition);
+    return static_cast<SourceFileType>(SourceFileTypeMap[suffix]);
+}
 
 #endif //JUDGERTOTEACHING_UTIL_H

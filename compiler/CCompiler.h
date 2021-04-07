@@ -9,12 +9,10 @@
 class CCompiler : public Compiler {
 public:
     explicit CCompiler(JudgeConfig* config);
-private:
-    string generateCompileCommand() const override;
-
-public:
     CompileResult compile() const override;
+private:
 
+    string generateCompileCommand() const override;
 };
 
 
