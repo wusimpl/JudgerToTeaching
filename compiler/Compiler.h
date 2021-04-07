@@ -23,7 +23,7 @@ public:
             SE,//发生系统错误，原因请查看errno变量
             CE //编译失败
         };
-        int errnoValue; //保存错误信息
+        int errnoValue; //保存错误信息,0 means no error
         string compileOutput;//编译命令输出信息
         CompileStatus status;
         CompileResult(){
@@ -52,11 +52,6 @@ protected:
      */
     virtual string generateCompileCommand() const =0;
 
-
-
 };
-
-
-
 
 #endif //JUDGERTOTEACHING_COMPILER_H

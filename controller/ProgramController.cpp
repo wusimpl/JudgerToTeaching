@@ -4,10 +4,12 @@
 
 #include "ProgramController.h"
 
-ProcessController::ResultCode ProcessController::run() {
+ProcessController::ControllerResult ProcessController::run() {
+    ControllerResult controllerResult;
     //检查root权限
     if(getuid() != 0){
-        return PERMISSION_DENIED;
+        controllerResult.runStatus = ControllerResult::PERMISSION_DENIED;
+        return controllerResult;
     }
 
     //
@@ -18,8 +20,10 @@ ProcessController::ResultCode ProcessController::run() {
     }else if(subPid == 0){//子进程代码
 
     }else{
-        return FORK_ERROR;
+        controllerResult.runStatus = ControllerResult::FORK_ERROR;
+        return controllerResult;
     }
 
-    return OK;
+    controllerResult.runStatus = ControllerResult::OK;
+    return controllerResult;
 }

@@ -16,10 +16,9 @@ using std::string;
 using std::fstream;
 using std::getline;
 
-#ifndef CONFIG_PATH
-#define CONFIG_PATH "~/.Judge/config.ini"
-#endif
-
+#define BLACK_LIST_MODE true
+#define WHITE_LIST_MODE false
+#define KB *1024
 /**
  * 源代码类型
  */
@@ -46,28 +45,53 @@ static std::map<string,int> SourceFileTypeMap = {
         {"py",SourceFileType::py}
 };
 
+/**
+ * 整个判题流程的评判结果信息
+ */
+typedef struct WholeResult{
+    enum ErrorCode{
+        NONE=-1, //初始状态
+        CE=0, //Compile Error
+
+        TLE, //Time Limited Error
+        MLE, //Memory Limited Error
+        OLE, //Output Limited Error, 通常意味着短时间内输出过多
+        RE, //Runtime Error
+        RF, //Restricted Function, 调用了危险的函数
+
+        WA, //Wrong Answer
+        PC, //Partially Correct, 通过了部分测试数据
+        AC, //Accepted
+        PE, //Presentation Error, 输出格式错误(可能是空格、换行、数值精度等未控制好)
+
+        SE //System Error, 评判系统内部错误
+
+    }errorCode;
+
+    WholeResult(){
+        errorCode = NONE;
+    }
+}WholeResult;
 
 /**
- * 评判结果
+ * 资源限制结构体
  */
-enum JudgeResult{
-    NONE=-1, //初始状态
-    CE=0, //Compile Error
+typedef struct ResourceLimit{
+    int limitedCPUTime; // 单位为 ms
+    int limitedRealTime; // ms
+    int limitedMemory; // 单位为 KB
+    int limitedStack; // KB
+    int limitedOutputSize; // KB
 
-    TLE, //Time Limited Error
-    MLE, //Memory Limited Error
-    OLE, //Output Limited Error, 通常意味着短时间内输出过多
-    RE, //Runtime Error
-    RF, //Restricted Function, 调用了危险的函数
 
-    WA, //Wrong Answer
-    PC, //Partially Correct, 通过了部分测试数据
-    AC, //Accepted
-    PE, //Presentation Error, 输出格式错误(可能是空格、换行、数值精度等未控制好)
-
-    SE //System Error, 评判系统内部错误
-
-};
+    ResourceLimit(){
+        limitedCPUTime = 1500;
+        limitedRealTime = 3000;
+        limitedMemory = 5000 KB;
+        limitedOutputSize = 2000 KB;
+        limitedStack = 2000 KB;
+    }
+}ResourceLimit;
 
 /**
  * 读取配置文件的类
@@ -85,7 +109,7 @@ class ConfigurationTool{
 private:
     /**
      * 获取文件行数
-     * @param file 要求未已打开的文件对象，函数不会在执行时关闭它
+     * @param file 要求为已打开的文件对象，此函数不会在返回时关闭它
      * @return 文件行数
      */
     int countLines(fstream& file){
@@ -103,7 +127,7 @@ private:
     /**
      * 去掉字符串首尾空格
      * @param str
-     * @return
+     * @return 去掉首尾空格后的字符串
      */
     string trim(string str){
         str.erase(0, str.find_first_not_of(" \t")); // 去掉头部空格
@@ -205,12 +229,7 @@ public:
         this->exePath = currentTime.insert(0,__exeFilePath).append(".executable");
 
         sysCallList = nullptr;
-        filterMode = true;
-
-        limitedCPUTime = 1500;
-        limitedMemory = 5000;
-
-        judgeResult = NONE;
+        filterMode = WHITE_LIST_MODE;//默认白名单模式
     }
 
     string srcPath; //源代码文件全路径
@@ -219,26 +238,13 @@ public:
     SourceFileType fileType; //源文件类型，帮助调用相应编译器
 
     int* sysCallList; //系统调用名单，与filterMode搭配使用
-    bool filterMode; //true：白名单模式 false：黑名单模式
+    bool filterMode; //true：黑名单模式 false：白名单模式
 
-    int limitedCPUTime; // 单位为 ms
-    int limitedMemory; // 单位为 KB
+    ResourceLimit requiredResourceLimit; //题目要求的资源限制值
+    ResourceLimit usedResourceLimit; //程序实际所用资源
 
-    JudgeResult judgeResult;
-
-
+    WholeResult wholeResult; //所有评判结果
 };
-
-
-/*
- *
- */
-struct JudgeInfo{
-    int usedCPUTime; //被测程序cpu使用时间
-    int usedMemory;
-
-};
-
 
 
  /**

@@ -2,6 +2,7 @@
 
 #include "compiler/CCompiler.h"
 #include "compiler/CXXCompiler.h"
+#include "controller/ProgramController.h"
 #include <iostream>
 using std::cout;
 using std::endl;
@@ -31,8 +32,12 @@ int main(int argc,char* argv[]) {
             break;
     }
     Compiler::CompileResult compileResult = compiler->compile();
-    cout << compileResult.compileOutput << endl;
+    if(compileResult.status == Compiler::CompileResult::OK){
+        delete compiler;
 
-    delete compiler;
+        ProcessController controller(&cfg);
+    } else{
+
+    }
     return 0;
 }

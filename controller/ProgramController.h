@@ -40,12 +40,14 @@ private:
 
 public:
 
-    enum ResultCode{
-        OK, //运行成功
-        PERMISSION_DENIED, //权限不够，请尝试提权运行
-        FORK_ERROR, //创建子进程失败
-        EXEC_ERROR, //
-    };
+    typedef struct ControllerResult{
+        enum RunStatus{
+            OK, //运行成功
+            PERMISSION_DENIED, //权限不够，请尝试提权运行
+            FORK_ERROR, //创建子进程失败
+            EXEC_ERROR, //
+        }runStatus;
+    }ControllerResult;
 
     explicit ProcessController(JudgeConfig* cfg):config(cfg){
     }
@@ -53,7 +55,7 @@ public:
      * 运行config中的exe文件
      * @return 结果状态码，详细返回值定义请查看枚举定义
      */
-    ResultCode run();
+    ControllerResult run();
 
     JudgeConfig *getConfig() const {
         return config;
