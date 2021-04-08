@@ -7,14 +7,16 @@
 
 #include "../utils/util.h"
 #include <csignal>
-#include <pthread.h>
 #include <cerrno>
+#include <pthread.h>
 #include <unistd.h>
 
-#include <sys/wait.h>
 #include <ctime>
+#include <sys/wait.h>
 #include <sys/resource.h>
 #include <sys/types.h>
+
+#define MAX_TEST_FILE_NUMBER 20
 
 /**
  * 限制进程各类资源的使用的宏
@@ -67,8 +69,18 @@ public:
 };
 
 class SubProcess{
+private:
+    JudgeConfig* config;
+    FILE* openedReadFiles[MAX_TEST_FILE_NUMBER]{nullptr};
+    FILE* openedWriteFiles[MAX_TEST_FILE_NUMBER]{nullptr};
 
+public:
+    explicit SubProcess(JudgeConfig* cfg);
+    ~SubProcess();
 
+    void run();
 
+private:
+    void setResourceLimit();
 };
 #endif //JUDGERTOTEACHING_PROGRAMCONTROLLER_H

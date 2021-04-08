@@ -8,11 +8,10 @@
 using std::endl;
 using std::cout;
 
-#ifndef DEBUG
-#define DEBUG_PRINT(x)
-#endif
-#ifdef DEBUG
-#define DEBUG_PRINT(x) cout<<x<<endl;
+#if DEBUG != 1
+    #define DEBUG_PRINT(x)
+#else
+    #define DEBUG_PRINT(x) cout<<x<<endl;
 #endif
 
 #endif //JUDGERTOTEACHING_DEBUG_H

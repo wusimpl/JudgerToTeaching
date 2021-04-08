@@ -4,6 +4,7 @@
 
 #ifndef JUDGERTOTEACHING_UTIL_H
 #define JUDGERTOTEACHING_UTIL_H
+#define DEBUG 1
 
 #include <string>
 #include <fstream>
@@ -11,6 +12,8 @@
 #include <stdio.h>
 #include <cstring>
 #include <map>
+#include <dirent.h>
+#include <unistd.h>
 #include "debug.h"
 using std::string;
 using std::fstream;
@@ -19,6 +22,9 @@ using std::getline;
 #define BLACK_LIST_MODE true
 #define WHITE_LIST_MODE false
 #define KB *1024
+#define UNLIMITED -1 //资源无限制
+#define MAX_PROGRAM_ARGS 100
+
 /**
  * 源代码类型
  */
@@ -30,9 +36,52 @@ enum SourceFileType{
     py,
 };
 
+/**
+ * 目录结构体，存放目录中的所有文件名
+ */
+typedef struct Dir{
+    string dirPath;
+    string* files;
+    int size;
+
+    Dir(string directory,int s){
+        dirPath = directory;
+        size = s;
+        files = new string[size];
+    }
+
+    Dir(const Dir& dir){
+        this->size = dir.size;
+        this->dirPath = dir.dirPath;
+        files = new string[size];
+        for (int i = 0; i < size; ++i) {
+            files[i] = dir.files[i];
+        }
+    }
+
+    Dir& operator=(const Dir& dir) {
+        this->size = dir.size;
+        this->dirPath = dir.dirPath;
+        files = new string[size];
+        for (int i = 0; i < size; ++i) {
+            files[i] = dir.files[i];
+        }
+        return *this;
+
+    }
+
+    ~Dir(){
+        if(files){
+            delete[] files;
+        }
+    }
+}Dir;
+
 string static getCurrentFormattedTime();
 int static execShellCommand(const string& cmd,string& output);
 SourceFileType static getExternalName(const string& fileName);
+string static getHomeDirectory();
+//Dir getFilesOfDir(string dirPath);
 
 /**
  * 源代码类型映射
@@ -77,11 +126,11 @@ typedef struct WholeResult{
  * 资源限制结构体
  */
 typedef struct ResourceLimit{
-    int limitedCPUTime; // 单位为 ms
-    int limitedRealTime; // ms
-    int limitedMemory; // 单位为 KB
-    int limitedStack; // KB
-    int limitedOutputSize; // KB
+    unsigned long limitedCPUTime; // 单位为 ms
+    unsigned long limitedRealTime; // ms
+    unsigned long limitedMemory; // 单位为 KB
+    unsigned long limitedStack; // KB
+    unsigned long limitedOutputSize; // KB
 
 
     ResourceLimit(){
@@ -97,14 +146,14 @@ typedef struct ResourceLimit{
  * 读取配置文件的类
  */
 class ConfigurationTool{
-    class pair{
-    public:
+private:
+    typedef struct pair{
         string key;
         string value;
-    };
+    }pair;
 
     int pairCount;//配置对数量
-    struct pair* pairs;
+    pair* pairs;
 
 private:
     /**
@@ -124,14 +173,17 @@ private:
         return count;
     }
 
+public:
     /**
-     * 去掉字符串首尾空格
+     * 去掉字符串首尾空格，\r,\n
      * @param str
      * @return 去掉首尾空格后的字符串
      */
-    string trim(string str){
+    string static trim(string str){
         str.erase(0, str.find_first_not_of(" \t")); // 去掉头部空格
         str.erase(str.find_last_not_of(" \t") + 1); // 去掉尾部空格
+        str.erase(str.find_last_not_of("\r") + 1); // 去掉尾部回车
+        str.erase(str.find_last_not_of("\n") + 1); // 去掉尾部换行
         return str;
     }
 
@@ -216,6 +268,9 @@ public:
         string __exeFilePath;
         configurationTool.getValue("JudgeOutputFilePath",__outputFilepath);
         configurationTool.getValue("JudgeExeFilePath",__exeFilePath);
+        string homeDirectory = getHomeDirectory();
+        __outputFilepath = homeDirectory + __outputFilepath;
+        __exeFilePath = homeDirectory + __exeFilePath;
 
         //创建临时工作目录
         string mkdir = string("mkdir ").append(__outputFilepath).append(" ").append(__exeFilePath).append(" 2>&1");
@@ -225,15 +280,36 @@ public:
             return;
         }
 
-        this->outputFilePath = string(currentTime).insert(0,__outputFilepath).append(".out");
+        this->outputFilePath = string(currentTime).insert(0,__outputFilepath).append("-out/");
+        mkdir = string("mkdir ").append(outputFilePath).append(" 2>&1");
+        if(execShellCommand(mkdir,commandOutputInfo) != 0){
+            DEBUG_PRINT(commandOutputInfo);
+            return;
+        }
         this->exePath = currentTime.insert(0,__exeFilePath).append(".executable");
 
         sysCallList = nullptr;
         filterMode = WHITE_LIST_MODE;//默认白名单模式
+
+        for (int i = 0; i < MAX_PROGRAM_ARGS; ++i) {
+            programArgs[i] = nullptr;
+        }
     }
 
     string srcPath; //源代码文件全路径
     string exePath; //可执行文件全路径
+    string testInPath; //测试输入文件路径(文件夹)，每组测试数据都要求与输出文件名配对
+    string testOutPath; //测试输出文件路径(文件夹)
+    char* programArgs[100]; //被测试程序的参数
+    /**
+     * question1
+     *  in
+     *      1.in
+     *      2.in
+     *  out
+     *      1.out
+     *      2.out
+     */
     string outputFilePath; //输出文件路径(重定向被测程序的stdout到outputFilePath)
     SourceFileType fileType; //源文件类型，帮助调用相应编译器
 
@@ -294,6 +370,79 @@ SourceFileType static getExternalName(const string& fileName){
     }
     string suffix = fileName.substr(dotPosition+1,fileName.length()-dotPosition);
     return static_cast<SourceFileType>(SourceFileTypeMap[suffix]);
+}
+
+
+ /**
+  * 获取目录中的所有文件，文件名为全路径
+  * @param directory 请参看结构体定义
+  * @return 失败或者成功获取
+  */
+Dir static getFilesOfDirWithFullPath(string dirPath) {
+    DIR* dir = nullptr;
+    struct dirent* ptr;
+    int size = 0;//总文件数
+
+    if((dir=opendir(dirPath.c_str())) == nullptr){
+       return Dir(dirPath,0);
+    }
+     while ((ptr=readdir(dir))){
+         if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
+             size++;
+         }
+     }
+     closedir(dir);
+     opendir(dirPath.c_str());
+     Dir myFiles(dirPath,size);
+     int i = 0;
+     while ((ptr=readdir(dir))){
+         if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
+             myFiles.files[i++] = dirPath.append(ptr->d_name);
+         }
+     }
+     closedir(dir);
+    return myFiles;
+}
+
+/**
+  * 获取目录中的所有文件
+  * @param directory 请参看结构体定义
+  * @return 失败或者成功获取
+  */
+Dir static getFilesOfDir(string dirPath) {
+    DIR* dir = nullptr;
+    struct dirent* ptr;
+    int size = 0;//总文件数
+
+    if((dir=opendir(dirPath.c_str())) == nullptr){
+        return Dir(dirPath,0);
+    }
+    while ((ptr=readdir(dir))){
+        if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
+            size++;
+        }
+    }
+    closedir(dir);
+    opendir(dirPath.c_str());
+    Dir myFiles(dirPath,size);
+    int i = 0;
+    while ((ptr=readdir(dir))){
+        if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
+            myFiles.files[i++] = ptr->d_name;
+        }
+    }
+    closedir(dir);
+    return myFiles;
+}
+
+/**
+ * 获取Linux当前用户的家目录
+ * @return 家目录
+ */
+string static getHomeDirectory(){
+    string output;
+    execShellCommand("cd && pwd",output);
+    return ConfigurationTool::trim(output)+"/";
 }
 
 #endif //JUDGERTOTEACHING_UTIL_H

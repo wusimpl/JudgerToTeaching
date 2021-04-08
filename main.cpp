@@ -1,5 +1,3 @@
-#define DEBUG
-
 #include "compiler/CCompiler.h"
 #include "compiler/CXXCompiler.h"
 #include "controller/ProgramController.h"
@@ -16,6 +14,10 @@ int main(int argc,char* argv[]) {
     JudgeConfig cfg(configPath);
     cfg.srcPath = "/home/andy/main.cpp";
     cfg.fileType = getExternalName(cfg.srcPath);
+    cfg.testInPath = "/home/andy/in/";
+    cfg.testOutPath = "/home/andy/out/";
+    cfg.programArgs[0] = "a.out";
+    cfg.programArgs[1] = "okay";
     Compiler* compiler = nullptr;
 
     switch (cfg.fileType) {
@@ -36,8 +38,9 @@ int main(int argc,char* argv[]) {
         delete compiler;
 
         ProcessController controller(&cfg);
+        controller.run();
     } else{
-
+        DEBUG_PRINT("编译错误！");
     }
     return 0;
 }
