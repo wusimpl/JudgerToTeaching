@@ -12,28 +12,10 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <ctime>
-#include <sys/wait.h>
-#include <sys/resource.h>
+//#include <sys/wait.h>
+
 #include <sys/types.h>
 
-#define MAX_TEST_FILE_NUMBER 20
-#define KILL_PROCESS(pid) (kill(pid,SIGKILL))
-#define KILLED_SUCCESS nullptr
-#define KILLED_ERROR_INFO (&errno)
-
-/**
- * 限制进程各类资源的使用的宏
- */
-typedef struct rlimit rlimit;
-#define SetRLimit_X(X,rlimitStruct) setrlimit(RLIMIT_##X,&(rlimitStruct))
-/**
- * rlimit_X(AS,rlimit)
- * rlimit_X(CORE,rlimit)
- * rlimit_X(CPU,rlimit)
- * rlimit_X(DATA,rlimit)
- * rlimit_X(FSIZE,rlimit)
- * rlimit_X(NOFILE,rlimit)
- */
 
 
 /**
@@ -84,19 +66,5 @@ public:
     }
 };
 
-class SubProcess{
-private:
-    JudgeConfig* config;
-    FILE* openedReadFiles[MAX_TEST_FILE_NUMBER]{nullptr};
-    FILE* openedWriteFiles[MAX_TEST_FILE_NUMBER]{nullptr};
 
-public:
-    explicit SubProcess(JudgeConfig* cfg);
-    ~SubProcess();
-
-    void run();
-
-private:
-    void setResourceLimit();
-};
 #endif //JUDGERTOTEACHING_PROGRAMCONTROLLER_H

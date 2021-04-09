@@ -18,11 +18,7 @@ using std::fstream;
 using std::getline;
 
 //debug 打印调试输出
-#if _DEBUG
-    #define DEBUG_PRINT(x) std::cout<<x<<std::endl;
-#else
-    #define DEBUG_PRINT(x)
-#endif
+#define DEBUG_PRINT(x) std::cout<<x<<std::endl;
 
 #define BLACK_LIST_MODE true
 #define WHITE_LIST_MODE false
@@ -41,6 +37,31 @@ using std::getline;
 
 #define SetDefaultResourceLimit(var,value) \
  this->requiredResourceLimit.var = value; \
+
+
+#define MAX_TEST_FILE_NUMBER 20
+#define KILL_PROCESS(pid) (kill(pid,SIGKILL))
+#define KILLED_SUCCESS nullptr
+#define KILLED_ERROR_INFO (&errno)
+
+#define minutes *60*1000 // 1 min = 60 000 ms
+#define TIME_VALUE(timeval) (timeval.tv_sec*1000 + timeval.tv_usec/1000) // ms
+#define R_CPU_TIME(rusage) TIME_VALUE(rusage.ru_utime) // ms
+
+/**
+ * 限制进程各类资源的使用的宏
+ */
+typedef struct rlimit rlimit;
+#define SetRLimit_X(X,rlimitStruct) setrlimit(RLIMIT_##X,&(rlimitStruct))
+/**
+ * rlimit_X(AS,rlimit)
+ * rlimit_X(CORE,rlimit)
+ * rlimit_X(CPU,rlimit)
+ * rlimit_X(DATA,rlimit)
+ * rlimit_X(FSIZE,rlimit)
+ * rlimit_X(NOFILE,rlimit)
+ */
+
 
 /**
  * 源代码类型

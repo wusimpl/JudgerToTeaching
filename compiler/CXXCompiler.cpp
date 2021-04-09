@@ -11,7 +11,7 @@ string CXXCompiler::generateCompileCommand() const {
         return string("nullptr");
     }
     stringstream ss;
-    ss << "g++ "<<"-Wall "<<cfg->srcPath<<" -o "<<cfg->exePath;
+    ss << "g++ "<<"-Wall -lm "<<cfg->srcPath<<" -o "<<cfg->exePath;
     return ss.str();
 }
 

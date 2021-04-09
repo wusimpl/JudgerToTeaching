@@ -28,4 +28,4 @@ execute_process(COMMAND ${deleteCmd})
 #添加pthread库
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 message("************************************************************************************************************************************************************")
-add_executable(JudgerToTeaching main.cpp compiler/Compiler.h utils/util.h controller/ProgramController.cpp controller/ProgramController.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h)
+add_executable(JudgerToTeaching main.cpp compiler/Compiler.h utils/util.h controller/ProgramController.cpp controller/ProgramController.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h)
