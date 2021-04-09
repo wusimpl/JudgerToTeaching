@@ -6,6 +6,7 @@
  */
 #ifndef JUDGERTOTEACHING_COMPILER_H
 #define JUDGERTOTEACHING_COMPILER_H
+#define _DEBUG 1
 #include "../utils/util.h"
 
 class Compiler {

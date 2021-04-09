@@ -4,26 +4,43 @@
 
 #ifndef JUDGERTOTEACHING_UTIL_H
 #define JUDGERTOTEACHING_UTIL_H
-#define DEBUG 1
 
 #include <string>
 #include <fstream>
+#include <iostream>
 #include <ios>
-#include <stdio.h>
 #include <cstring>
 #include <map>
 #include <dirent.h>
 #include <unistd.h>
-#include "debug.h"
 using std::string;
 using std::fstream;
 using std::getline;
+
+//debug 打印调试输出
+#if _DEBUG
+    #define DEBUG_PRINT(x) std::cout<<x<<std::endl;
+#else
+    #define DEBUG_PRINT(x)
+#endif
 
 #define BLACK_LIST_MODE true
 #define WHITE_LIST_MODE false
 #define KB *1024
 #define UNLIMITED -1 //资源无限制
 #define MAX_PROGRAM_ARGS 100
+#define RV_ERROR -1
+#define RV_OK 0
+
+#define LOAD_ONE_CONFIG(key,value) \
+ string value; \
+ if( !configurationTool.getValue(key,value) ){ \
+    DEBUG_PRINT("加载配置错误!"); \
+    return;\
+ } \
+
+#define SetDefaultResourceLimit(var,value) \
+ this->requiredResourceLimit.var = value; \
 
 /**
  * 源代码类型
@@ -126,19 +143,19 @@ typedef struct WholeResult{
  * 资源限制结构体
  */
 typedef struct ResourceLimit{
-    unsigned long limitedCPUTime; // 单位为 ms
-    unsigned long limitedRealTime; // ms
-    unsigned long limitedMemory; // 单位为 KB
-    unsigned long limitedStack; // KB
-    unsigned long limitedOutputSize; // KB
+    unsigned long cpuTime; // 单位为 ms
+    unsigned long realTime; // ms
+    unsigned long memory; // 单位为 KB
+    unsigned long stack; // KB
+    unsigned long outputSize; // KB
 
 
     ResourceLimit(){
-        limitedCPUTime = 1500;
-        limitedRealTime = 3000;
-        limitedMemory = 5000 KB;
-        limitedOutputSize = 2000 KB;
-        limitedStack = 2000 KB;
+        cpuTime = 1500;
+        realTime = 3000;
+        memory = 5000 KB;
+        outputSize = 2000 KB;
+        stack = 2000 KB;
     }
 }ResourceLimit;
 
@@ -247,7 +264,10 @@ public:
 
 };
 
-/*
+
+
+
+ /*
  * 判题配置
  */
 class JudgeConfig{
@@ -264,29 +284,38 @@ public:
             DEBUG_PRINT("配置文件加载错误!\n");
             return;
         }
-        string __outputFilepath;
-        string __exeFilePath;
-        configurationTool.getValue("JudgeOutputFilePath",__outputFilepath);
-        configurationTool.getValue("JudgeExeFilePath",__exeFilePath);
+        LOAD_ONE_CONFIG("JudgeOutputFilePath",JudgeOutputFilePath);
+        LOAD_ONE_CONFIG("JudgeExeFilePath",JudgeExeFilePath);
+        LOAD_ONE_CONFIG("DefaultLimitedCPUTime",DefaultLimitedCPUTime);
+        SetDefaultResourceLimit(cpuTime, atoi(DefaultLimitedCPUTime.c_str()));
+        LOAD_ONE_CONFIG("DefaultLimitedRealTime",DefaultLimitedRealTime);
+        SetDefaultResourceLimit(realTime, atoi(DefaultLimitedRealTime.c_str()));
+        LOAD_ONE_CONFIG("DefaultLimitedStack",DefaultLimitedStack);
+        SetDefaultResourceLimit(stack, atoi(DefaultLimitedStack.c_str()));
+        LOAD_ONE_CONFIG("DefaultLimitedOutputSize",DefaultLimitedOutputSize);
+        SetDefaultResourceLimit(outputSize, atoi(DefaultLimitedOutputSize.c_str()));
+        LOAD_ONE_CONFIG("DefaultLimitedMemory",DefaultLimitedMemory);
+        SetDefaultResourceLimit(memory, atoi(DefaultLimitedMemory.c_str()));
+
         string homeDirectory = getHomeDirectory();
-        __outputFilepath = homeDirectory + __outputFilepath;
-        __exeFilePath = homeDirectory + __exeFilePath;
+        JudgeOutputFilePath = homeDirectory + JudgeOutputFilePath;
+        JudgeExeFilePath = homeDirectory + JudgeExeFilePath;
 
         //创建临时工作目录
-        string mkdir = string("mkdir ").append(__outputFilepath).append(" ").append(__exeFilePath).append(" 2>&1");
+        string mkdir = string("mkdir ").append(JudgeExeFilePath).append(" ").append(JudgeExeFilePath).append(" 2>&1");
         string commandOutputInfo;
         if(execShellCommand(mkdir,commandOutputInfo) != 0){
             DEBUG_PRINT(commandOutputInfo);
             return;
         }
 
-        this->outputFilePath = string(currentTime).insert(0,__outputFilepath).append("-out/");
+        this->outputFilePath = string(currentTime).insert(0,JudgeOutputFilePath).append("-out/");
         mkdir = string("mkdir ").append(outputFilePath).append(" 2>&1");
         if(execShellCommand(mkdir,commandOutputInfo) != 0){
             DEBUG_PRINT(commandOutputInfo);
             return;
         }
-        this->exePath = currentTime.insert(0,__exeFilePath).append(".executable");
+        this->exePath = currentTime.insert(0,JudgeExeFilePath).append(".executable");
 
         sysCallList = nullptr;
         filterMode = WHITE_LIST_MODE;//默认白名单模式
