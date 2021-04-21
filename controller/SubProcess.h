@@ -6,6 +6,7 @@
 #define JUDGERTOTEACHING_SUBPROCESS_H
 #include "../utils/util.h"
 #include <sys/resource.h>
+#include <seccomp.h>
 
 class SubProcess{
 private:
@@ -20,7 +21,17 @@ public:
     void run();
 
 private:
+
+    /**
+    * 设置资源限制的函数
+    */
     void setResourceLimit();
+
+    /**
+     * 限制系统调用
+     * @return
+     */
+    bool restrainSystemCall();
 };
 
 

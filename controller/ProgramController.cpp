@@ -5,23 +5,28 @@
 #include <sys/wait.h>
 #include "ProgramController.h"
 #include "SubProcess.h"
+#define DEBUG_SUBPROCESS false
+
 
 ProcessController::ControllerResult ProcessController::run() {
     ControllerResult controllerResult;
     //检查root权限
-    if(getuid() == 0){
+    if(getuid() != 0){
         DEBUG_PRINT("需要root权限!");
         controllerResult.runStatus = ControllerResult::PERMISSION_DENIED;
         return controllerResult;
     }
 
     //
-    int subPid = fork(); //vfork()保证子进程先行，此处暂时不用
+    int subPid = vfork(); //vfork()保证子进程先行，此处暂时不用
     struct timeval start{};
     struct timeval end{};
     gettimeofday(&start, nullptr);
     if(subPid == 0){//子进程代码
         DEBUG_PRINT("子进程 running!!");
+        if(DEBUG_SUBPROCESS){ // 方便调试子进程，睡眠20s https://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_25.html
+            sleep(30);
+        }
         SubProcess subProcess(config);
         subProcess.run();
     }else if (subPid > 0){//父进程代码

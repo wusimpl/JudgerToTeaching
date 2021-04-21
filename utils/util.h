@@ -20,27 +20,30 @@ using std::getline;
 //debug 打印调试输出
 #define DEBUG_PRINT(x) std::cout<<x<<std::endl;
 
-#define BLACK_LIST_MODE true
-#define WHITE_LIST_MODE false
+#define MAX_SYSCALL_NUMBER 100 // 系统调用配置表最大长度
+#define BLACK_LIST_MODE 1 // 系统调用黑名单模式
+#define WHITE_LIST_MODE 0 // 系统调用白黑名单模式
 #define KB *1024
 #define UNLIMITED -1 //资源无限制
-#define MAX_PROGRAM_ARGS 100
-#define RV_ERROR -1
-#define RV_OK 0
+#define MAX_PROGRAM_ARGS 100 // 用户程序参数最大数量
+#define RV_ERROR -1 // 通用错误返回状态码
+#define RV_OK 0 // 通用正确返回状态码
 
+// 加载一条配置
 #define LOAD_ONE_CONFIG(key,value) \
  string value; \
  if( !configurationTool.getValue(key,value) ){ \
-    DEBUG_PRINT("加载配置错误!"); \
+    DEBUG_PRINT("加载单项配置错误!");        \
+    configPath = "error";              \
     return;\
  } \
 
+ // 设置资源限制
 #define SetDefaultResourceLimit(var,value) \
  this->requiredResourceLimit.var = value; \
 
-
-#define MAX_TEST_FILE_NUMBER 20
-#define KILL_PROCESS(pid) (kill(pid,SIGKILL))
+#define MAX_TEST_FILE_NUMBER 20 // 测试数据最大数量
+#define KILL_PROCESS(pid) (kill(pid,SIGKILL))  // 用于杀死进程的宏
 #define KILLED_SUCCESS nullptr
 #define KILLED_ERROR_INFO (&errno)
 
@@ -53,14 +56,7 @@ using std::getline;
  */
 typedef struct rlimit rlimit;
 #define SetRLimit_X(X,rlimitStruct) setrlimit(RLIMIT_##X,&(rlimitStruct))
-/**
- * rlimit_X(AS,rlimit)
- * rlimit_X(CORE,rlimit)
- * rlimit_X(CPU,rlimit)
- * rlimit_X(DATA,rlimit)
- * rlimit_X(FSIZE,rlimit)
- * rlimit_X(NOFILE,rlimit)
- */
+
 
 
 /**
@@ -293,7 +289,7 @@ public:
  */
 class JudgeConfig{
 public:
-    JudgeConfig(string configPath){
+    JudgeConfig(string& configPath){
 //        srcPath  = "";
 
         string currentTime = getCurrentFormattedTime();
@@ -303,11 +299,12 @@ public:
         bool success = configurationTool.load(configPath);
         if(!success){
             DEBUG_PRINT("配置文件加载错误!\n");
-            return;
+            exit(RV_ERROR);
         }
-        LOAD_ONE_CONFIG("JudgeOutputFilePath",JudgeOutputFilePath);
-        LOAD_ONE_CONFIG("JudgeExeFilePath",JudgeExeFilePath);
+        LOAD_ONE_CONFIG("JudgeOutputFilePath",JudgeOutputFilePath); // 程序输出文件存放路径
+        LOAD_ONE_CONFIG("JudgeExeFilePath",JudgeExeFilePath); // 程序存放路径
         LOAD_ONE_CONFIG("DefaultLimitedCPUTime",DefaultLimitedCPUTime);
+        LOAD_ONE_CONFIG("SysCallFilterMode",filterMode); //系统调用过滤模式
         SetDefaultResourceLimit(cpuTime, atoi(DefaultLimitedCPUTime.c_str()));
         LOAD_ONE_CONFIG("DefaultLimitedRealTime",DefaultLimitedRealTime);
         SetDefaultResourceLimit(realTime, atoi(DefaultLimitedRealTime.c_str()));
@@ -323,7 +320,7 @@ public:
         JudgeExeFilePath = homeDirectory + JudgeExeFilePath;
 
         //创建临时工作目录
-        string mkdir = string("mkdir ").append(JudgeExeFilePath).append(" ").append(JudgeExeFilePath).append(" 2>&1");
+        string mkdir = string("mkdir -p ").append(JudgeExeFilePath).append(" 2>&1");
         string commandOutputInfo;
         if(execShellCommand(mkdir,commandOutputInfo) != 0){
             DEBUG_PRINT(commandOutputInfo);
@@ -331,15 +328,24 @@ public:
         }
 
         this->outputFilePath = string(currentTime).insert(0,JudgeOutputFilePath).append("-out/");
-        mkdir = string("mkdir ").append(outputFilePath).append(" 2>&1");
+        mkdir = string("mkdir -p ").append(outputFilePath).append(" 2>&1");
         if(execShellCommand(mkdir,commandOutputInfo) != 0){
             DEBUG_PRINT(commandOutputInfo);
             return;
         }
         this->exePath = currentTime.insert(0,JudgeExeFilePath).append(".executable");
 
-        sysCallList = nullptr;
-        filterMode = WHITE_LIST_MODE;//默认白名单模式
+        sysCallFilterMode = WHITE_LIST_MODE;//默认白名单模式
+        if(filterMode == "b"){
+            sysCallFilterMode = BLACK_LIST_MODE;
+        }else if(filterMode == "w"){
+
+        }else{
+            DEBUG_PRINT("系统调用配置出错!设置为白名单模式已默认");
+        }
+        for (int i = 0; i < MAX_SYSCALL_NUMBER; ++i) {
+            sysCallList[i] = -1;
+        }
 
         for (int i = 0; i < MAX_PROGRAM_ARGS; ++i) {
             programArgs[i] = nullptr;
@@ -363,8 +369,8 @@ public:
     string outputFilePath; //输出文件路径(重定向被测程序的stdout到outputFilePath)
     SourceFileType fileType; //源文件类型，帮助调用相应编译器
 
-    int* sysCallList; //系统调用名单，与filterMode搭配使用
-    bool filterMode; //true：黑名单模式 false：白名单模式
+    int sysCallList[MAX_SYSCALL_NUMBER]; //系统调用名单，与filterMode搭配使用
+    int sysCallFilterMode; //true：黑名单模式 false：白名单模式
 
     ResourceLimit requiredResourceLimit; //题目要求的资源限制值
     ResourceLimit usedResourceLimit; //程序实际所用资源
@@ -495,4 +501,12 @@ string static getHomeDirectory(){
     return ConfigurationTool::trim(output)+"/";
 }
 
+bool static isRoot(){
+    string user;
+    execShellCommand("whoami",user);
+    if(user == "root\n"){
+        return true;
+    }
+    return false;
+}
 #endif //JUDGERTOTEACHING_UTIL_H

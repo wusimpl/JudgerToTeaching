@@ -4,6 +4,7 @@
 
 #include "SubProcess.h"
 
+#define SystemCallAdd(ctx,syscallNumber) seccomp_rule_add(ctx, SCMP_ACT_KILL, syscallNumber, 0)
 
 SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     //变量初始化
@@ -32,11 +33,11 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
             DEBUG_PRINT("重定向错误！");
         }
     }
+
+    //配置系统调用过滤规则
+    restrainSystemCall();
 }
 
-/**
- * 设置资源限制的函数
- */
 void SubProcess::setResourceLimit() {
     if(config->requiredResourceLimit.memory != UNLIMITED){
         rlimit as = {config->requiredResourceLimit.memory, config->requiredResourceLimit.memory}; //max memory size
@@ -69,19 +70,16 @@ void SubProcess::setResourceLimit() {
 }
 
 void SubProcess::run() {
-
-    //限制系统调用
-
     //控制权移交给被测程序
     execv(config->exePath.c_str(), config->programArgs);
 //    exit(0);
 }
 
 SubProcess::~SubProcess() {
+    DEBUG_PRINT("子进程析构中");
     for (auto & openedReadFile : openedReadFiles) {
         if(openedReadFile != nullptr){
             fclose(openedReadFile);
-            DEBUG_PRINT("子进程析构中");
         }else{
             break;
         }
@@ -93,4 +91,28 @@ SubProcess::~SubProcess() {
             break;
         }
     }
+}
+
+bool SubProcess::restrainSystemCall() {
+    scmp_filter_ctx ctx;
+    int rv;
+    ctx = seccomp_init(config->fileType==BLACK_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL); // 黑白名单模式设置
+    for (int sysCallNumber : config->sysCallList) {
+        if(sysCallNumber < 0){
+            return true;
+        }else {
+            rv = SystemCallAdd(ctx,sysCallNumber); // syscallNumber必须由SCMP_SYS()宏来获得
+            if(rv < RV_OK){
+                DEBUG_PRINT("系统调用设置出错！请检查系统调用表");
+                DEBUG_PRINT("errno:" << errno);
+                return false;
+            }
+        }
+    }
+    if(seccomp_load(ctx) != RV_OK){
+        DEBUG_PRINT("seccomp load error!");
+        return false;
+    }
+    return true;
+
 }

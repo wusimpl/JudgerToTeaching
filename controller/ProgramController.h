@@ -11,9 +11,6 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <sys/time.h>
-#include <ctime>
-//#include <sys/wait.h>
-
 #include <sys/types.h>
 
 
@@ -42,6 +39,8 @@ public:
         unsigned long timeout;
     }ThreadInfo;
 
+    explicit ProcessController(JudgeConfig* cfg):config(cfg){}
+
     /**
      * 进程超时监视器，若子进程运行超时，则发送信号杀死
      * @param timeout_killer_args
@@ -49,7 +48,6 @@ public:
      */
     static void* timeoutKiller(void* threadInfo);
 
-    explicit ProcessController(JudgeConfig* cfg):config(cfg){}
 
     /**
      * 运行config中的exe文件
