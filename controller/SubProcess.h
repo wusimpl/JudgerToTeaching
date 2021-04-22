@@ -13,7 +13,7 @@ private:
     JudgeConfig* config;
     FILE* openedReadFiles[MAX_TEST_FILE_NUMBER]{nullptr};
     FILE* openedWriteFiles[MAX_TEST_FILE_NUMBER]{nullptr};
-
+    scmp_filter_ctx ctx; // 系统调用过滤规则
 public:
     explicit SubProcess(JudgeConfig* cfg);
     ~SubProcess();

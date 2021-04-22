@@ -1,4 +1,4 @@
-CXXFLAGS := g++ -g # c++ 编译参数
+CXXFLAGS := g++ -ggdb -std=c++11 # c++ 编译参数
 LinkLibs := -lpthread -lseccomp # 引用线程库与seccomp库
 ConfigDir := $(CURDIR)/config.ini # 程序配置文件目录
 EtsJudgeDir := /$(shell whoami)/.ets/judge/ # 程序工作目录
@@ -13,11 +13,11 @@ main:main.o SubProcess.o CCompiler.o CXXCompiler.o ProgramController.o
 	mkdir -p $(EtsJudgeDir)
 	cp $(ConfigDir) $(EtsJudgeDir)
 	make cleanobj
+	make cleanjudge
 
 
 %.o:%.cpp
 	$(CXXFLAGS) -c $<
-
 
 .PHONY:clean cleanobj cleanexe cleanjudge
 clean:
@@ -27,5 +27,6 @@ cleanobj:
 cleanexe:
 	rm -f main
 cleanjudge:
-	-rm $(EtsJudgeDir)/JudgeExeFilePath/* $(EtsJudgeDir)/JudgeOutputFilePath/*
+	cd $(EtsJudgeDir) && cd JudgeOutputFilePath && rm -rf ./*
+	cd $(EtsJudgeDir) && cd JudgeExeFilePath && rm -rf ./*
 

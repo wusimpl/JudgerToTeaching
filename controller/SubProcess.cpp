@@ -4,17 +4,18 @@
 
 #include "SubProcess.h"
 
-#define SystemCallAdd(ctx,syscallNumber) seccomp_rule_add(ctx, SCMP_ACT_KILL, syscallNumber, 0)
+#define AddSysCallRule(sysCallNumber) seccomp_rule_add(ctx,config->fileType==BLACK_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
 
 SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     //变量初始化
     for (int i = 0; i < MAX_TEST_FILE_NUMBER; ++i) {
         openedReadFiles[i] = openedWriteFiles[i] = nullptr;
     }
-
+    ctx = nullptr;
     //资源限制
     setResourceLimit();
     //重定向输入输出：打开的文件会在析构函数被调用时被关闭
+
     Dir testInFiles = getFilesOfDirWithFullPath(cfg->testInPath);
     if(testInFiles.size > 0){
         FILE* inputFile = fopen(testInFiles.files[0].c_str(),"r");
@@ -33,7 +34,6 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
             DEBUG_PRINT("重定向错误！");
         }
     }
-
     //配置系统调用过滤规则
     restrainSystemCall();
 }
@@ -77,6 +77,7 @@ void SubProcess::run() {
 
 SubProcess::~SubProcess() {
     DEBUG_PRINT("子进程析构中");
+    // 释放读写资源
     for (auto & openedReadFile : openedReadFiles) {
         if(openedReadFile != nullptr){
             fclose(openedReadFile);
@@ -91,19 +92,31 @@ SubProcess::~SubProcess() {
             break;
         }
     }
+    // 释放系统调用过滤器
+    if(ctx != nullptr){
+        seccomp_release(ctx);
+    }
 }
 
 bool SubProcess::restrainSystemCall() {
-    scmp_filter_ctx ctx;
-    int rv;
-    ctx = seccomp_init(config->fileType==BLACK_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL); // 黑白名单模式设置
+    ctx = seccomp_init(config->sysCallFilterMode == WHITE_LIST_MODE ? SCMP_ACT_KILL : SCMP_ACT_ALLOW); // 黑白名单模式设置;
+    if(ctx == nullptr){
+        DEBUG_PRINT("seccomp初始化失败");
+        return false;
+    }
+
+//    seccomp_rule_add(ctx,SCMP_ACT_ALLOW,SCMP_SYS(execve),0);
+
+    int rv; // return value
     for (int sysCallNumber : config->sysCallList) {
         if(sysCallNumber < 0){
             return true;
         }else {
-            rv = SystemCallAdd(ctx,sysCallNumber); // syscallNumber必须由SCMP_SYS()宏来获得
+//            rv = AddSysCallRule(sysCallNumber);
+            rv =  seccomp_rule_add(ctx,config->sysCallFilterMode == BLACK_LIST_MODE ? SCMP_ACT_KILL : SCMP_ACT_ALLOW,sysCallNumber,0); // syscallNumber必须由SCMP_SYS()宏来获得
             if(rv < RV_OK){
                 DEBUG_PRINT("系统调用设置出错！请检查系统调用表");
+                DEBUG_PRINT("rv:" << rv);
                 DEBUG_PRINT("errno:" << errno);
                 return false;
             }

@@ -16,16 +16,16 @@ int main(int argc,char* argv[]) {
     }
     //初始化配置文件
     string configPath;
-    configPath = getHomeDirectory() + "/.ets/judge/config.ini";
+    configPath = getHomeDirectory() + ".ets/judge/config.ini";
     JudgeConfig cfg(configPath);
     if(configPath == string("error")){
         return RV_ERROR;
     }
-    cfg.srcPath = "/root/main.cpp";
+    cfg.srcPath = "/root/test.cpp";
     cfg.fileType = getExternalName(cfg.srcPath);
-    cfg.testInPath = "/home/andy/in/";
-    cfg.testOutPath = "/home/andy/out/";
-    cfg.sysCallList[0] = SCMP_SYS(fork);
+    cfg.testInPath = "/root/in/";
+    cfg.testOutPath = "/root/out/";
+    cfg.sysCallList[0] = SCMP_SYS(open);
     //编译
     Compiler* compiler = nullptr;
     switch (cfg.fileType) {
