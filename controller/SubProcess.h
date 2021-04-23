@@ -18,7 +18,7 @@ public:
     explicit SubProcess(JudgeConfig* cfg);
     ~SubProcess();
 
-    void run();
+    void runUserProgram();
 
 private:
 
@@ -32,6 +32,8 @@ private:
      * @return
      */
     bool restrainSystemCall();
+
+    void redirectIO();
 };
 
 

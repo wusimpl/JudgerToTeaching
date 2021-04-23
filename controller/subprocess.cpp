@@ -1,27 +1,32 @@
 //
-// Created by WilliamsAndy on 2021/4/9.
+// Created by root on 2021/4/23.
 //
 
-#include "SubProcess.h"
+#include "subprocess.h"
+
+
+FILE* openedReadFiles[MAX_TEST_FILE_NUMBER];
+FILE* openedWriteFiles[MAX_TEST_FILE_NUMBER];
+scmp_filter_ctx ctx; // 系统调用过滤规则
 
 #define AddSysCallRule(sysCallNumber) \
     seccomp_rule_add(ctx,config->fileType==BLACK_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
 
-SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
+void subProcessInit(JudgeConfig *config) {
     //变量初始化
     for (int i = 0; i < MAX_TEST_FILE_NUMBER; ++i) {
         openedReadFiles[i] = openedWriteFiles[i] = nullptr;
     }
     ctx = nullptr;
     //资源限制
-    setResourceLimit();
+//    setResourceLimit(config);
     //重定向输入输出：打开的文件会在析构函数被调用时被关闭
-    redirectIO();
+//    redirectIO(config);
     //配置系统调用过滤规则
-//    restrainSystemCall();
+//    restrainSystemCall(config);
 }
 
-void SubProcess::setResourceLimit() {
+void setResourceLimit(JudgeConfig *config) {
     if(config->requiredResourceLimit.memory != UNLIMITED){
         rlimit as = {config->requiredResourceLimit.memory, config->requiredResourceLimit.memory}; //max memory size
         if(SetRLimit_X(AS,as) != 0){
@@ -52,38 +57,16 @@ void SubProcess::setResourceLimit() {
     }
 }
 
-void SubProcess::runUserProgram() {
+void runUserProgram(JudgeConfig *config) {
     //控制权移交给被测程序
-    if(execve(config->exePath.c_str(), config->programArgs, nullptr) != RV_OK){
+    if(execve(config->exePath.c_str(),config->programArgs,nullptr) != RV_OK){
         DEBUG_PRINT("failed to execute user program!");
         DEBUG_PRINT("errno:" << errno);
     }
 }
 
-SubProcess::~SubProcess() {
-    DEBUG_PRINT("子进程析构中");
-    // 释放读写资源
-    for (auto & openedReadFile : openedReadFiles) {
-        if(openedReadFile != nullptr){
-            fclose(openedReadFile);
-        }else{
-            break;
-        }
-    }
-    for (auto & openedWriteFile : openedWriteFiles) {
-        if(openedWriteFile != nullptr){
-            fclose(openedWriteFile);
-        }else{
-            break;
-        }
-    }
-    // 释放系统调用过滤器
-    if(ctx != nullptr){
-        seccomp_release(ctx);
-    }
-}
 
-bool SubProcess::restrainSystemCall() {
+bool restrainSystemCall(JudgeConfig *config) {
     ctx = seccomp_init(config->sysCallFilterMode == WHITE_LIST_MODE ? SCMP_ACT_KILL : SCMP_ACT_ALLOW); // 黑白名单模式设置;
     if(ctx == nullptr){
         DEBUG_PRINT("seccomp初始化失败");
@@ -115,7 +98,7 @@ bool SubProcess::restrainSystemCall() {
 
 }
 
-void SubProcess::redirectIO() {
+void redirectIO(JudgeConfig *config) {
     Dir testInFiles = getFilesOfDirWithFullPath(config->testInPath);
     if(testInFiles.size > 0){
         FILE* inputFile = fopen(testInFiles.files[0].c_str(),"r");

@@ -1,9 +1,10 @@
 //
-// Created by rory on 2021/3/6.
+// Created by root on 2021/4/23.
 //
 
 #ifndef JUDGERTOTEACHING_PROGRAMCONTROLLER_H
 #define JUDGERTOTEACHING_PROGRAMCONTROLLER_H
+
 
 #include "../utils/util.h"
 #include <csignal>
@@ -17,20 +18,17 @@
 /**
  * 子进程控制器，负责运行、监控被测代码子进程
  */
-class ProcessController {
-private:
-    JudgeConfig* config;
 
-public:
+    enum RunStatus{
+        EXITED_NORMALLY, //运行成功
+        PERMISSION_DENIED, //权限不够，请尝试提权运行
+        FORK_ERROR, //创建子进程失败
+        WAIT_ERROR, // 阻塞失败
+        THREAD_CREATE_ERROR //线程创建失败
+    };
 
     typedef struct ControllerResult{
-        enum RunStatus{
-            EXITED_NORMALLY, //运行成功
-            PERMISSION_DENIED, //权限不够，请尝试提权运行
-            FORK_ERROR, //创建子进程失败
-            WAIT_ERROR, // 阻塞失败
-            THREAD_CREATE_ERROR //线程创建失败
-        }runStatus;
+        RunStatus runStatus;
     }ControllerResult;
 
     typedef struct ThreadInfo{
@@ -38,7 +36,6 @@ public:
         unsigned long timeout;
     }ThreadInfo;
 
-    explicit ProcessController(JudgeConfig* cfg):config(cfg){}
 
     /**
      * 进程超时监视器，若子进程运行超时，则发送信号杀死
@@ -52,16 +49,7 @@ public:
      * 运行config中的exe文件
      * @return 结果状态码，详细返回值定义请查看枚举定义
      */
-    ControllerResult run();
-
-    JudgeConfig *getConfig() const {
-        return config;
-    }
-
-    void setConfig(JudgeConfig *cfg) {
-        ProcessController::config = cfg;
-    }
-};
+    ControllerResult control(JudgeConfig* config);
 
 
 #endif //JUDGERTOTEACHING_PROGRAMCONTROLLER_H

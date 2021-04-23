@@ -2,11 +2,8 @@
 #include "compiler/CXXCompiler.h"
 #include "controller/ProgramController.h"
 #include <iostream>
-#include <seccomp.h>
 using std::cout;
 using std::endl;
-
-
 
 int main(int argc,char* argv[]) {
     // 权限检查
@@ -21,11 +18,11 @@ int main(int argc,char* argv[]) {
     if(configPath == string("error")){
         return RV_ERROR;
     }
-    cfg.srcPath = "/root/test.cpp";
+    cfg.srcPath = "/root/test/test.cpp";
     cfg.fileType = getExternalName(cfg.srcPath);
-    cfg.testInPath = "/root/in/";
-    cfg.testOutPath = "/root/out/";
-    cfg.sysCallList[0] = SCMP_SYS(open);
+    cfg.testInPath = "/root/test/in/";
+    cfg.testOutPath = "/root/test/out/";
+//    cfg.sysCallList[0] = SCMP_SYS(open);
     //编译
     Compiler* compiler = nullptr;
     switch (cfg.fileType) {

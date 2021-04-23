@@ -23,7 +23,10 @@ using std::getline;
 #define MAX_SYSCALL_NUMBER 100 // 系统调用配置表最大长度
 #define BLACK_LIST_MODE 1 // 系统调用黑名单模式
 #define WHITE_LIST_MODE 0 // 系统调用白黑名单模式
-#define KB *1024
+#define KB (1024)
+#define MB (1024*1024)
+#define seconds (1000)
+#define minutes (seconds*60)
 #define UNLIMITED -1 //资源无限制
 #define MAX_PROGRAM_ARGS 100 // 用户程序参数最大数量
 #define RV_ERROR -1 // 通用错误返回状态码
@@ -47,7 +50,6 @@ using std::getline;
 #define KILLED_SUCCESS nullptr
 #define KILLED_ERROR_INFO (&errno)
 
-#define minutes *60*1000 // 1 min = 60 000 ms
 #define TIME_VALUE(timeval) (timeval.tv_sec*1000 + timeval.tv_usec/1000) // ms
 #define R_CPU_TIME(rusage) TIME_VALUE(rusage.ru_utime) // ms
 
@@ -168,11 +170,11 @@ typedef struct ResourceLimit{
 
 
     ResourceLimit(){
-        cpuTime = 1500;
-        realTime = 3000;
-        memory = 5000 KB;
-        outputSize = 2000 KB;
-        stack = 2000 KB;
+        cpuTime = 30 * seconds;
+        realTime = 2 * minutes;
+        memory = 100 * KB;
+        outputSize = 10 * KB;
+        stack = 200 * KB;
     }
 }ResourceLimit;
 
