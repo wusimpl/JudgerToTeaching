@@ -33,9 +33,12 @@ public:
         }runStatus;
     }ControllerResult;
 
+    /**
+     * 子线程需要的参数信息
+     */
     typedef struct ThreadInfo{
         pid_t pid;
-        unsigned long timeout;
+        float timeout;
     }ThreadInfo;
 
     explicit ProcessController(JudgeConfig* cfg):config(cfg){}
@@ -47,20 +50,19 @@ public:
      */
     static void* timeoutKiller(void* threadInfo);
 
+    /**
+     * 进程状态跟踪器，拦截子进程的exit系统调用，获取最后一刻的/proc/[subpid]/status
+     * (!!! deprecated,switching to trace subprocess in main thread)
+     * @param threadInfo
+     * @return
+     */
+//    static void* statusTracer(void* threadInfo);
 
     /**
      * 运行config中的exe文件
      * @return 结果状态码，详细返回值定义请查看枚举定义
      */
     ControllerResult run();
-
-    JudgeConfig *getConfig() const {
-        return config;
-    }
-
-    void setConfig(JudgeConfig *cfg) {
-        ProcessController::config = cfg;
-    }
 };
 
 

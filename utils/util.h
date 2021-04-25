@@ -13,9 +13,13 @@
 #include <map>
 #include <dirent.h>
 #include <unistd.h>
+#include <vector>
+#include "../controller/Pipe3.h"
+
 using std::string;
 using std::fstream;
 using std::getline;
+using std::vector;
 
 //debug 打印调试输出
 #define DEBUG_PRINT(x) std::cout<<x<<std::endl;
@@ -23,13 +27,13 @@ using std::getline;
 #define MAX_SYSCALL_NUMBER 100 // 系统调用配置表最大长度
 #define BLACK_LIST_MODE 1 // 系统调用黑名单模式
 #define WHITE_LIST_MODE 0 // 系统调用白黑名单模式
-#define KB (1024)
-#define MB (1024*1024)
+#define KB (1)
+#define MB (KB*1024)
 #define seconds (1000)
 #define minutes (seconds*60)
-#define UNLIMITED -1 //资源无限制
+#define UNLIMITED (-1) //资源无限制
 #define MAX_PROGRAM_ARGS 100 // 用户程序参数最大数量
-#define RV_ERROR -1 // 通用错误返回状态码
+#define RV_ERROR (-1) // 通用错误返回状态码
 #define RV_OK 0 // 通用正确返回状态码
 
 // 加载一条配置
@@ -50,8 +54,8 @@ using std::getline;
 #define KILLED_SUCCESS nullptr
 #define KILLED_ERROR_INFO (&errno)
 
-#define TIME_VALUE(timeval) (timeval.tv_sec*1000 + timeval.tv_usec/1000) // ms
-#define R_CPU_TIME(rusage) TIME_VALUE(rusage.ru_utime) // ms
+#define TIME_VALUE(timeval) (timeval.tv_sec*1000.0 + timeval.tv_usec/1000.0) // ms
+#define R_CPU_TIME(rusage) (TIME_VALUE(rusage.ru_utime) + TIME_VALUE(rusage.ru_stime)) // ms
 
 /**
  * 限制进程各类资源的使用的宏
@@ -113,22 +117,23 @@ typedef struct Dir{
     }
 }Dir;
 
-string static getCurrentFormattedTime();
-int static execShellCommand(const string& cmd,string& output);
-SourceFileType static getExternalName(const string& fileName);
-string static getHomeDirectory();
-//Dir getFilesOfDir(string dirPath);
+/**
+ *
+ */
+typedef struct PipeArgs{
+    string stdOutput;
+    string stdError;
+    int returnCode; //1:stdout 2:stderr
+    PipeArgs(){
+        returnCode = -1; // error
+    }
+}PipeArgs;
+
 
 /**
  * 源代码类型映射
  */
-static std::map<string,int> SourceFileTypeMap = {
-        {"c",SourceFileType::c},
-        {"cc",SourceFileType::cpp},
-        {"cpp",SourceFileType::cpp},
-        {"java",SourceFileType::java},
-        {"py",SourceFileType::py}
-};
+extern std::map<string,int> SourceFileTypeMap;
 
 /**
  * 整个判题流程的评判结果信息
@@ -161,13 +166,12 @@ typedef struct WholeResult{
 /**
  * 资源限制结构体
  */
-typedef struct ResourceLimit{
-    unsigned long cpuTime; // 单位为 ms
-    unsigned long realTime; // ms
+typedef struct ResourceLimit {
+    float cpuTime; // 单位为 ms
+    float realTime; // ms
     unsigned long memory; // 单位为 KB
     unsigned long stack; // KB
     unsigned long outputSize; // KB
-
 
     ResourceLimit(){
         cpuTime = 30 * seconds;
@@ -176,6 +180,15 @@ typedef struct ResourceLimit{
         outputSize = 10 * KB;
         stack = 200 * KB;
     }
+
+    string toString() const{
+        return string("{ cpu time:") +  std::to_string(cpuTime) + string(" ms\n") +
+               string("  real time:") + std::to_string(realTime) + string(" ms\n") +
+               string("  memory:") + std::to_string(memory) + string(" KB\n") +
+               string("  outputSize:") + std::to_string(outputSize) + string(" KB\n") +
+               string("  stack:") + std::to_string(stack) + string(" KB }\n");
+    }
+
 }ResourceLimit;
 
 /**
@@ -283,10 +296,21 @@ public:
 
 };
 
+//************************函数申明*************************************
+string getCurrentFormattedTime();
+int  execShellCommand(const string& cmd,string& output);
+int  execShellCommandPlus(const string& cmd,PipeArgs& args);
+void pipeRunImpl(PipeArgs* args);
+SourceFileType getExternalName(const string& fileName);
+string getHomeDirectory();
+Dir getFilesOfDir(string dirPath);
+Dir getFilesOfDirWithFullPath(string dirPath);
+bool isRoot();
+void static readFromFD(int fd,string& str); // 从文件描述符中读取文件到str，请确保fd有数据，否则会阻塞
+void split(const string& str,vector<string>& strs,const string& delimiters = " ");
+//**********************************************************************
 
-
-
- /*
+/*
  * 判题配置
  */
 class JudgeConfig{
@@ -297,7 +321,7 @@ public:
         string currentTime = getCurrentFormattedTime();
 
         //读取配置文件
-        ConfigurationTool configurationTool;
+        ConfigurationTool configurationTool{};
         bool success = configurationTool.load(configPath);
         if(!success){
             DEBUG_PRINT("配置文件加载错误!\n");
@@ -345,12 +369,12 @@ public:
         }else{
             DEBUG_PRINT("系统调用配置出错!设置为白名单模式已默认");
         }
-        for (int i = 0; i < MAX_SYSCALL_NUMBER; ++i) {
-            sysCallList[i] = -1;
+        for (int & i : sysCallList) {
+            i = -1;
         }
 
-        for (int i = 0; i < MAX_PROGRAM_ARGS; ++i) {
-            programArgs[i] = nullptr;
+        for (auto & programArg : programArgs) {
+            programArg = nullptr;
         }
     }
 
@@ -381,134 +405,4 @@ public:
 };
 
 
- /**
-  * 获取当前字符串形式的时间
-  * @return (example:1970-01-01-12:00:00)
-  */
-string static getCurrentFormattedTime(){
-    time_t currentGMTTime = time(nullptr);
-    char buffer[100] = {0};
-    strftime(buffer,sizeof(buffer),"%Y-%m-%d-%H:%M:%S",localtime(&currentGMTTime));
-    return string(buffer);
-}
-
-/**
- * 执行shell命令
- * @param cmd 要执行的shell命令
- * @param output 存放命令输出信息的变量
- * @return 0表示执行成功，否则返回errno的值
- */
-int static execShellCommand(const string& cmd,string& output){
-    FILE* compilePipe = popen(cmd.c_str(),"r");
-
-    if(compilePipe == nullptr){
-       return errno;
-    }
-
-    char buffer[1024]={0};
-//    memset(buffer,0,1024);
-    while(fgets(buffer,sizeof(buffer),compilePipe) != nullptr){
-        output.append(buffer);
-    }
-
-    pclose(compilePipe);//一定要记得关闭pipe，否则后果严重
-    return 0;
-}
-
-/**
- * 获取文件的扩展名
- * @param fileName 文件名
- * @return
- */
-SourceFileType static getExternalName(const string& fileName){
-    int dotPosition = fileName.find_last_of(".");
-    if (dotPosition == string::npos){ //未找到.
-        DEBUG_PRINT("无法获取文件扩展名!\n");
-        return SourceFileType::none;
-    }
-    string suffix = fileName.substr(dotPosition+1,fileName.length()-dotPosition);
-    return static_cast<SourceFileType>(SourceFileTypeMap[suffix]);
-}
-
-
- /**
-  * 获取目录中的所有文件，文件名为全路径
-  * @param directory 请参看结构体定义
-  * @return 失败或者成功获取
-  */
-Dir static getFilesOfDirWithFullPath(string dirPath) {
-    DIR* dir = nullptr;
-    struct dirent* ptr;
-    int size = 0;//总文件数
-
-    if((dir=opendir(dirPath.c_str())) == nullptr){
-       return Dir(dirPath,0);
-    }
-     while ((ptr=readdir(dir))){
-         if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
-             size++;
-         }
-     }
-     closedir(dir);
-     opendir(dirPath.c_str());
-     Dir myFiles(dirPath,size);
-     int i = 0;
-     while ((ptr=readdir(dir))){
-         if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
-             myFiles.files[i++] = dirPath.append(ptr->d_name);
-         }
-     }
-     closedir(dir);
-    return myFiles;
-}
-
-/**
-  * 获取目录中的所有文件
-  * @param directory 请参看结构体定义
-  * @return 失败或者成功获取
-  */
-Dir static getFilesOfDir(string dirPath) {
-    DIR* dir = nullptr;
-    struct dirent* ptr;
-    int size = 0;//总文件数
-
-    if((dir=opendir(dirPath.c_str())) == nullptr){
-        return Dir(dirPath,0);
-    }
-    while ((ptr=readdir(dir))){
-        if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
-            size++;
-        }
-    }
-    closedir(dir);
-    opendir(dirPath.c_str());
-    Dir myFiles(dirPath,size);
-    int i = 0;
-    while ((ptr=readdir(dir))){
-        if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
-            myFiles.files[i++] = ptr->d_name;
-        }
-    }
-    closedir(dir);
-    return myFiles;
-}
-
-/**
- * 获取Linux当前用户的家目录
- * @return 家目录
- */
-string static getHomeDirectory(){
-    string output;
-    execShellCommand("cd && pwd",output);
-    return ConfigurationTool::trim(output)+"/";
-}
-
-bool static isRoot(){
-    string user;
-    execShellCommand("whoami",user);
-    if(user == "root\n"){
-        return true;
-    }
-    return false;
-}
 #endif //JUDGERTOTEACHING_UTIL_H

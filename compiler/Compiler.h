@@ -43,7 +43,7 @@ public:
      * @param compileInfo 编译信息会输出到此参数
      * @return 编译结果，具体含义请查看结构体定义
      */
-    virtual  CompileResult compile() const = 0;
+    virtual  CompileResult compile() = 0;
 
 protected:
     /**

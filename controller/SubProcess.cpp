@@ -3,6 +3,7 @@
 //
 
 #include "SubProcess.h"
+#include <sys/ptrace.h>
 
 #define AddSysCallRule(sysCallNumber) \
     seccomp_rule_add(ctx,config->fileType==BLACK_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
@@ -19,32 +20,34 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     redirectIO();
     //配置系统调用过滤规则
 //    restrainSystemCall();
+    //trace me
+//    ptrace(PTRACE_TRACEME);
 }
 
 void SubProcess::setResourceLimit() {
-    if(config->requiredResourceLimit.memory != UNLIMITED){
-        rlimit as = {config->requiredResourceLimit.memory, config->requiredResourceLimit.memory}; //max memory size
+    if(config->requiredResourceLimit.memory != UNLIMITED){ // in bytes
+        rlimit as = {config->requiredResourceLimit.memory*1024, config->requiredResourceLimit.memory*1024}; //max memory size
         if(SetRLimit_X(AS,as) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
         }
     }
-    if(config->requiredResourceLimit.cpuTime != UNLIMITED){
-        rlimit cpu = {config->requiredResourceLimit.cpuTime, config->requiredResourceLimit.cpuTime};
+    if(config->requiredResourceLimit.cpuTime != UNLIMITED){ // in seconds
+        rlimit cpu = {unsigned(config->requiredResourceLimit.cpuTime), unsigned(config->requiredResourceLimit.cpuTime)};
         if(SetRLimit_X(CPU,cpu) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
         }
     }
     if(config->requiredResourceLimit.stack != UNLIMITED){
-        rlimit stack = {config->requiredResourceLimit.stack, config->requiredResourceLimit.stack};
+        rlimit stack = {config->requiredResourceLimit.stack*1024, config->requiredResourceLimit.stack*1024};
         if(SetRLimit_X(STACK,stack) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
         }
     }
     if(config->requiredResourceLimit.outputSize != UNLIMITED){
-        rlimit fsize = {config->requiredResourceLimit.outputSize, config->requiredResourceLimit.outputSize};
+        rlimit fsize = {config->requiredResourceLimit.outputSize*1024, config->requiredResourceLimit.outputSize*1024};
         if(SetRLimit_X(FSIZE,fsize) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
@@ -53,13 +56,14 @@ void SubProcess::setResourceLimit() {
 }
 
 void SubProcess::runUserProgram() {
-    //控制权移交给被测程序
+    //cpu控制权移交给被测程序
     if(execve(config->exePath.c_str(), config->programArgs, nullptr) != RV_OK){
         DEBUG_PRINT("failed to execute user program!");
         DEBUG_PRINT("errno:" << errno);
     }
 }
 
+// may never be called
 SubProcess::~SubProcess() {
     DEBUG_PRINT("子进程析构中");
     // 释放读写资源

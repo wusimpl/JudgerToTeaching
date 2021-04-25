@@ -39,6 +39,7 @@ int main(int argc,char* argv[]) {
             break;
     }
     Compiler::CompileResult compileResult = compiler->compile();
+    // "gcc main.c -o main" => ["gcc","main.c","-o","main"]
     if(compileResult.status == Compiler::CompileResult::OK){
         delete compiler;
     // 运行

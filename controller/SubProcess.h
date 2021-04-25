@@ -18,6 +18,9 @@ public:
     explicit SubProcess(JudgeConfig* cfg);
     ~SubProcess();
 
+    /**
+     * 已做好，前期准备工作，正式运行用户程序
+     */
     void runUserProgram();
 
 private:
