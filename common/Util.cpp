@@ -2,14 +2,10 @@
 // Created by root on 2021/4/24.
 //
 
-#include "util.h"
+#include "Util.h"
 #include "../controller/Pipe3.h"
-#include <poll.h>
+#include "ConfigurationTool.h"
 
-
-#define POLLREAD (POLLIN|POLLPRI)
-#define POLLWRITE (POLLOUT|POLLWRBAND)
-#define POLLRW (POLLIN|POLLOUT)
 
 std::map<string,int> SourceFileTypeMap = {
         {"c",SourceFileType::c},
@@ -19,10 +15,7 @@ std::map<string,int> SourceFileTypeMap = {
         {"py",SourceFileType::py}
 };
 
-/**
- * 获取当前字符串形式的时间
- * @return (example:1970-01-01-12:00:00)
- */
+
 string getCurrentFormattedTime(){
     time_t currentGMTTime = time(nullptr);
     char buffer[100] = {0};
@@ -30,7 +23,7 @@ string getCurrentFormattedTime(){
     return string(buffer);
 }
 
-void static readFromFD(int fd, string& str){ // read from file descriptor
+void readFromFD(int fd, string& str){ // read from file descriptor
     char buf[1024];
     int count;
 
@@ -40,38 +33,9 @@ void static readFromFD(int fd, string& str){ // read from file descriptor
         count = read(fd,buf,sizeof(buf) - 1);
     };
 }
-void pipeRunImpl(PipeArgs* args){
-    pollfd fds[2] = {
-            {pipes[STDOUT][READ],POLLREAD,0},
-            {pipes[STDERR][READ],POLLREAD,0}
-    };
 
-    switch(poll(fds,2,5 * seconds)){
-        case -1: //函数调用出错
-            DEBUG_PRINT("poll error");
-            break;
-        case 0:
-            DEBUG_PRINT("poll time out");
-            break;
-        default: //得到数据返回
-            if(fds[0].revents != 0){ // stdout
-                readFromFD(fds[0].fd,args->stdOutput);
-                args->returnCode = STDOUT;
-            }
-            if(fds[1].revents != 0){ //stderr
-                readFromFD(fds[1].fd,args->stdError);
-                args->returnCode = STDERR;
-            }
-            break;
-    }
-}
 
-/**
- * 执行shell命令
- * @param cmd 要执行的shell命令
- * @param output 存放命令输出信息的变量
- * @return 0表示执行成功，否则返回errno的值
- */
+
 int execShellCommand(const string& cmd,string& output){
     FILE* compilePipe = popen(cmd.c_str(),"r");
 
@@ -89,21 +53,11 @@ int execShellCommand(const string& cmd,string& output){
     return 0;
 }
 
-/**
- * 执行shell命令
- * @param cmd 不解释
- * @param output 存放命令输出信息的变量
- * @return RV表示执行成功，否则返回errno的值
- */
-int execShellCommandPlus(const string& cmd,PipeArgs& args){
-    return pipe3(cmd, reinterpret_cast<Pipe3Run>(pipeRunImpl), static_cast<void*>(&args));
+
+int execShellCommandPlus(const string& cmd,void* args){
+    return pipe3(cmd, reinterpret_cast<Pipe3Run>(pipeRunImpl), args);
 }
 
-/**
- * 获取文件的扩展名
- * @param fileName 文件名
- * @return
- */
 SourceFileType getExternalName(const string& fileName){
     int dotPosition = fileName.find_last_of(".");
     if (dotPosition == string::npos){ //未找到.
@@ -115,11 +69,6 @@ SourceFileType getExternalName(const string& fileName){
 }
 
 
-/**
- * 获取目录中的所有文件，文件名为全路径
- * @param directory 请参看结构体定义
- * @return 失败或者成功获取
- */
 Dir getFilesOfDirWithFullPath(string dirPath) {
     DIR* dir = nullptr;
     struct dirent* ptr;
@@ -146,11 +95,7 @@ Dir getFilesOfDirWithFullPath(string dirPath) {
     return myFiles;
 }
 
-/**
-  * 获取目录中的所有文件
-  * @param directory 请参看结构体定义
-  * @return 失败或者成功获取
-  */
+
 Dir getFilesOfDir(string dirPath) {
     DIR* dir = nullptr;
     struct dirent* ptr;
@@ -177,10 +122,7 @@ Dir getFilesOfDir(string dirPath) {
     return myFiles;
 }
 
-/**
- * 获取Linux当前用户的家目录
- * @return 家目录
- */
+
 string getHomeDirectory(){
     string output;
     execShellCommand("cd && pwd",output);
@@ -217,3 +159,4 @@ void split(const string &str,vector<string>& tokens, const string &delimiters) {
     }
 
 }
+

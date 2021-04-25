@@ -4,7 +4,8 @@
 
 #ifndef JUDGERTOTEACHING_SUBPROCESS_H
 #define JUDGERTOTEACHING_SUBPROCESS_H
-#include "../utils/util.h"
+#include "../common/Util.h"
+#include "../common/JudgeConfig.h"
 #include <sys/resource.h>
 #include <seccomp.h>
 

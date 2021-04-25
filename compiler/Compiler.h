@@ -7,32 +7,13 @@
 #ifndef JUDGERTOTEACHING_COMPILER_H
 #define JUDGERTOTEACHING_COMPILER_H
 
-#include "../utils/util.h"
+#include "../common/JudgeConfig.h"
+#include "../common/Result.h"
 
 class Compiler {
 protected:
     JudgeConfig* cfg{};
 public:
-
-    /**
-     *保存编译结果的结构体，编译时发生系统错误时(SE)，错误代号errno在errnoValue中
-     */
-    typedef struct CompileResult{
-        enum CompileStatus{
-            OK,//编译成功
-            SE,//发生系统错误，原因请查看errno变量
-            CE //编译失败
-        };
-        int errnoValue; //保存错误信息,0 means no error
-        string compileOutput;//编译命令输出信息
-        CompileStatus status;
-        CompileResult(){
-            errnoValue = 0;//default value,means no error
-            status = CompileStatus::OK;
-        }
-
-    }CompileResult;
-
     explicit Compiler(JudgeConfig* config){
         this->cfg = config;
     }

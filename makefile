@@ -4,11 +4,11 @@ ConfigDir := $(CURDIR)/config.ini # 程序配置文件目录
 EtsJudgeDir := /$(shell whoami)/.ets/judge/ # 程序工作目录
 
 # 指定源文件所在目录
-vpath %.h compiler controller checker utils
-vpath %.o compiler controller checker
-vpath %.cpp compiler controller checker
+vpath %.h compiler controller checker common
+vpath %.o compiler controller checker common
+vpath %.cpp compiler controller checker common
 
-main:main.o SubProcess.o CCompiler.o CXXCompiler.o ProgramController.o
+main:main.o SubProcess.o CCompiler.o CXXCompiler.o ProgramController.o SubProcess.o Pipe3.o util.cpp
 	$(CXXFLAGS) -o main $^ $(LinkLibs)
 	mkdir -p $(EtsJudgeDir)
 	cp $(ConfigDir) $(EtsJudgeDir)

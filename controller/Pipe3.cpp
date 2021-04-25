@@ -3,9 +3,7 @@
 //
 
 #include "Pipe3.h"
-
-#define RV_OK 0
-#define RV_ERROR 1
+#include "../common/Util.h"
 
 int pipes[NUM_PIPES][2];
 
@@ -20,7 +18,6 @@ void closeAll(){
 
 
 int pipe3(const string& cmd,Pipe3Run pipe3Run,void* args){
-
     if(pipe(pipes[STDIN]) == 0 && pipe(pipes[STDOUT]) == 0 && pipe(pipes[STDERR]) == 0){
         if(!fork()){ // subprocess
             dup2(pipes[STDIN][READ],STDIN_FILENO);
@@ -45,5 +42,41 @@ int pipe3(const string& cmd,Pipe3Run pipe3Run,void* args){
         printf("创建管道错误! errno code:%d\n",errno);
         return RV_ERROR;
     }
+}
 
+void pipeRunImpl(PipeArgs* args){
+    pollfd fds[2] = {
+            {pipes[STDOUT][READ],POLLREAD,0},
+            {pipes[STDERR][READ],POLLREAD,0}
+    };
+
+    switch(poll(fds,2,5 * seconds)){
+        case -1: //函数调用出错
+            DEBUG_PRINT("poll error");
+            break;
+        case 0: //time out
+            DEBUG_PRINT("poll time out");
+            break;
+        default: //得到数据返回
+            switch (fds[0].revents) {
+                case 0: // error
+                    break;
+                case POLLEND:
+                    args->returnCode = STDOUT;
+                    break;
+                default:
+                    readFromFD(fds[0].fd,args->stdOutput);
+                    args->returnCode = STDOUT;
+            }
+
+            switch (fds[1].revents) {
+                case 0: // error
+                    break;
+                case POLLEND:
+                    break;
+                default:
+                    readFromFD(fds[0].fd,args->stdError);
+                    args->returnCode = STDERR;
+            }
+    }
 }

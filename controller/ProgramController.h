@@ -5,11 +5,11 @@
 #ifndef JUDGERTOTEACHING_PROGRAMCONTROLLER_H
 #define JUDGERTOTEACHING_PROGRAMCONTROLLER_H
 
-#include "../utils/util.h"
+#include "../common//Util.h"
+#include "../common/JudgeConfig.h"
 #include <csignal>
 #include <cerrno>
 #include <pthread.h>
-#include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -19,26 +19,16 @@
  */
 class ProcessController {
 private:
-    JudgeConfig* config;
+    JudgeConfig* config{};
 
 public:
-
-    typedef struct ControllerResult{
-        enum RunStatus{
-            EXITED_NORMALLY, //运行成功
-            PERMISSION_DENIED, //权限不够，请尝试提权运行
-            FORK_ERROR, //创建子进程失败
-            WAIT_ERROR, // 阻塞失败
-            THREAD_CREATE_ERROR //线程创建失败
-        }runStatus;
-    }ControllerResult;
 
     /**
      * 子线程需要的参数信息
      */
     typedef struct ThreadInfo{
         pid_t pid;
-        float timeout;
+        double timeout;
     }ThreadInfo;
 
     explicit ProcessController(JudgeConfig* cfg):config(cfg){}

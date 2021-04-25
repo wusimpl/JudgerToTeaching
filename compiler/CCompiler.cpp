@@ -3,6 +3,8 @@
 //
 
 #include "CCompiler.h"
+#include "../controller/Pipe3.h"
+#include "../common/Util.h"
 
 #include <sstream>
 using std::stringstream;
@@ -21,12 +23,12 @@ CCompiler::CCompiler(JudgeConfig *config) : Compiler(config) {
 
 }
 
-Compiler::CompileResult CCompiler::compile() {
+CompileResult CCompiler::compile() {
     CompileResult compileResult;
     string cmd = generateCompileCommand();
     PipeArgs args = {};
 
-    int returnValue = execShellCommandPlus(cmd,args);//执行编译命令
+    int returnValue = execShellCommandPlus(cmd,static_cast<void*>(&args));//执行编译命令
     if(returnValue == RV_OK){
         switch (args.returnCode) {
             case STDOUT:
@@ -34,10 +36,12 @@ Compiler::CompileResult CCompiler::compile() {
                 break;
             case STDERR:
                 compileResult.status = CompileResult ::CompileStatus::CE;
+                cfg->wholeResult.errorCode = WholeResult::CE;
                 break;
         }
     }else{
         compileResult.status = CompileResult::CompileStatus::SE;
+        cfg->wholeResult.errorCode = WholeResult::SE;
         compileResult.errnoValue = errno;
     }
 

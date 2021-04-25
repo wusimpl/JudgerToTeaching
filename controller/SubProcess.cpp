@@ -25,29 +25,40 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
 }
 
 void SubProcess::setResourceLimit() {
-    if(config->requiredResourceLimit.memory != UNLIMITED){ // in bytes
-        rlimit as = {config->requiredResourceLimit.memory*1024, config->requiredResourceLimit.memory*1024}; //max memory size
+    //超出限制会被发送SIGSEGV信号杀死进程
+    if(config->requiredResourceLimit.memory != UNLIMITED){ // in KB
+        // in bytes
+//        rlimit oldAs;
+//        getrlimit(RLIMIT_AS,&oldAs);
+//        DEBUG_PRINT("rlimit:" << oldAs.rlim_cur<<" " << oldAs.rlim_max);
+        rlimit as = {config->requiredResourceLimit.memory*KB, config->requiredResourceLimit.memory*KB}; //max memory size
         if(SetRLimit_X(AS,as) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
         }
     }
-    if(config->requiredResourceLimit.cpuTime != UNLIMITED){ // in seconds
+
+    //超出软限制会被发送SIGXCPU信号，如果没有捕获该信号，则被杀死
+    if(config->requiredResourceLimit.cpuTime != UNLIMITED){ // cpu time:in seconds
+        // in seconds
         rlimit cpu = {unsigned(config->requiredResourceLimit.cpuTime), unsigned(config->requiredResourceLimit.cpuTime)};
         if(SetRLimit_X(CPU,cpu) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
         }
     }
+
+    //SIGSEGV would be sent
     if(config->requiredResourceLimit.stack != UNLIMITED){
-        rlimit stack = {config->requiredResourceLimit.stack*1024, config->requiredResourceLimit.stack*1024};
+        rlimit stack = {config->requiredResourceLimit.stack*KB, config->requiredResourceLimit.stack*KB};
         if(SetRLimit_X(STACK,stack) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
         }
     }
+    // 超出限制被发送SIGXFSZ信号
     if(config->requiredResourceLimit.outputSize != UNLIMITED){
-        rlimit fsize = {config->requiredResourceLimit.outputSize*1024, config->requiredResourceLimit.outputSize*1024};
+        rlimit fsize = {config->requiredResourceLimit.outputSize*KB, config->requiredResourceLimit.outputSize*KB};
         if(SetRLimit_X(FSIZE,fsize) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;

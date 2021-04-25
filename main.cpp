@@ -23,6 +23,8 @@ int main(int argc,char* argv[]) {
     cfg.testInPath = "/root/test/in/";
     cfg.testOutPath = "/root/test/out/";
 //    cfg.sysCallList[0] = SCMP_SYS(open);
+
+
     //编译
     Compiler* compiler = nullptr;
     switch (cfg.fileType) {
@@ -38,15 +40,17 @@ int main(int argc,char* argv[]) {
         case py:
             break;
     }
-    Compiler::CompileResult compileResult = compiler->compile();
-    // "gcc main.c -o main" => ["gcc","main.c","-o","main"]
-    if(compileResult.status == Compiler::CompileResult::OK){
+    CompileResult compileResult = compiler->compile();
+    if(compileResult.status == CompileResult::OK){
         delete compiler;
-    // 运行
+        // 运行
         ProcessController controller(&cfg);
-        controller.run();
+        ProcessController::ControllerResult controllerResult;
+        controllerResult = controller.run();
+
     } else{
         DEBUG_PRINT("编译错误！");
+        DEBUG_PRINT(compileResult.compileOutput);
     }
     return 0;
 }
