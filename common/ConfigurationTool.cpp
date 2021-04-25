@@ -19,8 +19,8 @@ int ConfigurationTool::countLines(fstream &file) {
 string  ConfigurationTool::trim(string str) {
     str.erase(0, str.find_first_not_of(" \t")); // 去掉头部空格
     str.erase(str.find_last_not_of(" \t") + 1); // 去掉尾部空格
-    str.erase(str.find_last_not_of("\r") + 1); // 去掉尾部回车
-    str.erase(str.find_last_not_of("\n") + 1); // 去掉尾部换行
+    str.erase(str.find_last_not_of('\r') + 1); // 去掉尾部回车
+    str.erase(str.find_last_not_of('\n') + 1); // 去掉尾部换行
     return str;
 }
 

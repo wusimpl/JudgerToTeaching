@@ -45,7 +45,7 @@ int main(int argc,char* argv[]) {
         delete compiler;
         // 运行
         ProcessController controller(&cfg);
-        ProcessController::ControllerResult controllerResult;
+        ControllerResult controllerResult;
         controllerResult = controller.run();
 
     } else{

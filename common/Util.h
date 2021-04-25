@@ -81,7 +81,7 @@ typedef struct ResourceLimit {
     ResourceLimit(){
         cpuTime = 10; // seconds
         realTime = 20;// seconds
-        memory = 3000; // KB
+        memory = 5000; // KB
         outputSize = 200; // KB
         stack = 2000; // KB
     }

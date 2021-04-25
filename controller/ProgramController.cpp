@@ -13,7 +13,7 @@
 #define SysCallIn 1 // 进入系统调用
 #define SysCallOut 0 // 退出系统调用
 
-ProcessController::ControllerResult ProcessController::run() {
+ControllerResult ProcessController::run() {
     ControllerResult controllerResult;
 
     //检查root权限 (actually root confirmation has already done in the main function)
