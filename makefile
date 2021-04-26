@@ -8,7 +8,8 @@ vpath %.h compiler controller checker common
 vpath %.o compiler controller checker common
 vpath %.cpp compiler controller checker common
 
-main:main.o SubProcess.o CCompiler.o CXXCompiler.o ProgramController.o SubProcess.o Pipe3.o util.cpp
+main:main.o SubProcess.o CCompiler.o CXXCompiler.o ProgramController.o SubProcess.o Pipe3.o Util.o ConfigurationTool.o \
+JudgeConfig.o Result.o
 	$(CXXFLAGS) -o main $^ $(LinkLibs)
 	mkdir -p $(EtsJudgeDir)
 	cp $(ConfigDir) $(EtsJudgeDir)

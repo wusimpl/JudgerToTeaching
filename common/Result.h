@@ -50,7 +50,8 @@ typedef struct WholeResult{
         NONE=-1, //初始状态
         CE=0, //Compile Error
 
-        TLE, //Time Limited Error
+        CLE, //Cpu Time Limited Error
+        RLE, //Real Time Limited Error
         MLE, //Memory Limited Error
         OLE, //Output Limited Error, 输出文件的数据过大
         RE, //Runtime Error

@@ -1,6 +1,7 @@
 #include "compiler/CCompiler.h"
 #include "compiler/CXXCompiler.h"
 #include "controller/ProgramController.h"
+#include <seccomp.h>
 #include <iostream>
 using std::cout;
 using std::endl;
@@ -18,11 +19,12 @@ int main(int argc,char* argv[]) {
     if(configPath == string("error")){
         return RV_ERROR;
     }
-    cfg.srcPath = "/root/test/test.cpp";
+    cfg.srcPath = "/root/test/testopen.cpp";
     cfg.fileType = getExternalName(cfg.srcPath);
     cfg.testInPath = "/root/test/in/";
     cfg.testOutPath = "/root/test/out/";
-//    cfg.sysCallList[0] = SCMP_SYS(open);
+    cfg.sysCallList[0] = SCMP_SYS(open);
+    cfg.sysCallList[1] = SCMP_SYS(read);
 
 
     //编译

@@ -87,8 +87,8 @@ typedef struct ResourceLimit {
     }
 
     string toString() const{
-        return string("{ cpu time:") +  std::to_string(cpuTime) + string(" s\n") +
-               string("  real time:") + std::to_string(realTime) + string(" s\n") +
+        return string("{ cpu time:") +  std::to_string(cpuTime*1000) + string(" ms\n") +
+               string("  real time:") + std::to_string(realTime*1000) + string(" ms\n") +
                string("  memory:") + std::to_string(memory) + string(" KB\n") +
                string("  outputSize:") + std::to_string(outputSize) + string(" KB\n") +
                string("  stack:") + std::to_string(stack) + string(" KB }\n");

@@ -27,7 +27,7 @@ using std::endl;
 
 
 #define DEBUG_PRINT(x) cout<<x<<endl; // debug 打印调试输出
-#define MAX_SYSCALL_NUMBER 100 // 系统调用配置表最大长度
+#define MAX_SYSCALL_NUMBER 256 // 系统调用配置表最大长度
 #define BLACK_LIST_MODE 1 // 系统调用黑名单模式
 #define WHITE_LIST_MODE 0 // 系统调用白黑名单模式
 #define KB (1024)
@@ -35,9 +35,9 @@ using std::endl;
 #define seconds (1000)
 #define minutes (seconds*60)
 #define UNLIMITED (-1) //资源无限制
-#define MAX_PROGRAM_ARGS 100 // 用户程序参数最大数量
+#define MAX_PROGRAM_ARGS 100 // 用户程序命令行参数最大数量
 #define RV_ERROR (-1) // 通用错误返回状态码
-#define RV_OK 0 // 通用正确返回状态码
+#define RV_OK (0) // 通用正确返回状态码
 
 // 加载一条配置
 #define LOAD_ONE_CONFIG(key,value) \

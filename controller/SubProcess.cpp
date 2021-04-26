@@ -6,7 +6,7 @@
 #include <sys/ptrace.h>
 
 #define AddSysCallRule(sysCallNumber) \
-    seccomp_rule_add(ctx,config->fileType==BLACK_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
+    seccomp_rule_add(ctx,config->fileType==WHITE_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
 
 SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     //变量初始化
@@ -19,7 +19,7 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     //重定向输入输出：打开的文件会在析构函数被调用时被关闭
     redirectIO();
     //配置系统调用过滤规则
-//    restrainSystemCall();
+    restrainSystemCall();
     //trace me
 //    ptrace(PTRACE_TRACEME);
 }

@@ -28,15 +28,16 @@ ControllerResult ProcessController::run() {
     int subPid = fork();
     struct timeval start{}; // count real time (现实世界中程序从开始到结束的时间)
     struct timeval end{};
-    gettimeofday(&start, nullptr);
     if(subPid == 0){//子进程代码
         DEBUG_PRINT("子进程 running!!");
-
         // 方便调试子进程，睡眠30s https://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_25.html
         if(DEBUG_SUBPROCESS){
             sleep(30);
         }
+
         SubProcess subProcess(config);
+
+        kill(getpid(),SIGSTOP); // 子进程先阻塞自己，等待父进程准备好
         subProcess.runUserProgram();
 
     }else if (subPid > 0){ // 父进程代码
@@ -48,7 +49,7 @@ ControllerResult ProcessController::run() {
             config->requiredResourceLimit.realTime = 1 * minutes; //最多让其运行1分钟
         }
         pthread_t monitorThread; // 创建监视线程，超时则杀死子进程
-//        pthread_t traceThread; // 创建跟踪进程，拦截exit系统调用，或最后一刻的status信息 (unused，换成在主线程中跟踪)
+        pthread_t traceThread; // 创建跟踪进程，拦截exit系统调用，或最后一刻的status信息 (unused，换成在主线程中跟踪)
         pthread_attr_t attr;
         ThreadInfo monitorThreadInfo = {subPid,config->requiredResourceLimit.realTime};
         if(pthread_attr_init(&attr) != RV_OK){
@@ -66,7 +67,8 @@ ControllerResult ProcessController::run() {
 
             while(true){
                 ptrace(PTRACE_SYSCALL, subPid, nullptr, nullptr); // 跟踪子进程的系统调用
-                //???
+
+//                kill(subPid,SIGCONT); // send signal to subprocess to make it continue to run.
                 waitResult = wait4(subPid, &wstatus, WUNTRACED, &resourceUsage);
 
                 if (waitResult == RV_ERROR) {
@@ -103,10 +105,13 @@ ControllerResult ProcessController::run() {
                         DEBUG_PRINT("terminated signal:" << WTERMSIG(wstatus));
                         switch (WTERMSIG(wstatus)) {
                             case SIGSEGV: // 栈、内存超限会被发送此信号
+                                config->wholeResult.errorCode = WholeResult::MLE;
                                 break;
                             case SIGXCPU: // cpu超时会被发送此信号
+                                config->wholeResult.errorCode = WholeResult::CLE;
                                 break;
                             case SIGXFSZ: // 写入文件的数据超限会发送次信号
+                                config->wholeResult.errorCode = WholeResult::OLE;
                                 break;
                             default:
                                 DEBUG_PRINT("捕获到其他信号！");
@@ -115,17 +120,31 @@ ControllerResult ProcessController::run() {
 
                     } else if (WIFSTOPPED(wstatus)) { // stopped by a signal
                         DEBUG_PRINT("stopped signal:" << WSTOPSIG(wstatus));
-                        ptrace(PTRACE_GETREGS, subPid, 0, &regs); // 获取系统调用参数(主要是系统调用号)
-                        if(regs.orig_rax == SYS_exit_group) {
-                            if (sysCallStatus == SysCallIn) { // 进入系统调用
-                                sysCallStatus = SysCallOut;
-                                string command = string("cat /proc/") + std::to_string(subPid) + string("/status");
-                                execShellCommand(command, subProcessExitedStatus);
-                                DEBUG_PRINT("traced SYS_exit successfully")
-                            } else { // 退出系统调用
-                                sysCallStatus = SysCallIn;
-                            }
+
+//                        ptrace(PTRACE_GETREGS, subPid, 0, &regs); // 获取系统调用参数(主要是系统调用号)
+
+                        switch (WSTOPSIG(wstatus)) {
+                            case SIGCONT:
+                                break;
+                            case SIGSTOP: // 子进程阻塞了自己，运行到这里子进程就可以开始运行用户代码了
+                                gettimeofday(&start, nullptr);
+                                kill(subPid,SIGCONT);
+                                break;
+                            case SIGTRAP:
+                                if(regs.orig_rax == SYS_exit_group) {
+                                    if (sysCallStatus == SysCallIn) { // 进入系统调用
+                                        sysCallStatus = SysCallOut;
+                                        string command = string("cat /proc/") + std::to_string(subPid) + string("/status");
+                                        execShellCommand(command, subProcessExitedStatus);
+                                        DEBUG_PRINT("traced SYS_exit successfully")
+                                    } else { // 退出系统调用
+                                        sysCallStatus = SysCallIn;
+                                    }
+                                }
+                                break;
                         }
+
+
                     } else if (WIFCONTINUED(wstatus)) {
                         DEBUG_PRINT("resumed by delivery of SIGCONT.");
                     }
