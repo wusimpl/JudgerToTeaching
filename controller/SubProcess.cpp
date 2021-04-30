@@ -19,7 +19,7 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     //重定向输入输出：打开的文件会在析构函数被调用时被关闭
     redirectIO();
     //配置系统调用过滤规则
-    restrainSystemCall();
+//    restrainSystemCall();
     //trace me
 //    ptrace(PTRACE_TRACEME);
 }

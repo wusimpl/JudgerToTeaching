@@ -1,10 +1,9 @@
 #include "compiler/CCompiler.h"
 #include "compiler/CXXCompiler.h"
 #include "controller/ProgramController.h"
+#include "checker/AnswerChecker.h"
 #include <seccomp.h>
-#include <iostream>
-using std::cout;
-using std::endl;
+
 
 int main(int argc,char* argv[]) {
     // 权限检查
@@ -19,7 +18,7 @@ int main(int argc,char* argv[]) {
     if(configPath == string("error")){
         return RV_ERROR;
     }
-    cfg.srcPath = "/root/test/testopen.cpp";
+    cfg.srcPath = "/root/test/testprintf.cpp";
     cfg.fileType = getExternalName(cfg.srcPath);
     cfg.testInPath = "/root/test/in/";
     cfg.testOutPath = "/root/test/out/";
@@ -49,6 +48,15 @@ int main(int argc,char* argv[]) {
         ProcessController controller(&cfg);
         ControllerResult controllerResult;
         controllerResult = controller.run();
+        if(controllerResult.runStatus == ControllerResult::RunStatus::EXITED_NORMALLY){
+            //答案对比
+            if(!cfg.testOutPath.empty()){
+
+                AnswerChecker checker(cfg.testOutPath,cfg.outputFilePath);
+//                AnswerChecker::compareByByte("/root/test/output/1.out","/root/test/out/1.out");
+                checker.compareByTextByLine();
+            }
+        }
 
     } else{
         DEBUG_PRINT("编译错误！");

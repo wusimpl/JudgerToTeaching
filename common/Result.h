@@ -35,7 +35,8 @@ typedef struct ControllerResult{
         PERMISSION_DENIED, //权限不够，请尝试提权运行
         FORK_ERROR, //创建子进程失败
         TIME_OUT, // 运行超时
-        THREAD_CREATE_ERROR //线程创建失败
+        THREAD_CREATE_ERROR, //线程创建失败
+        WAIT_ERROR, //wait子进程失败
     }runStatus;
     int returnValue; // 用户程序返回值
 }ControllerResult;

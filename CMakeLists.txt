@@ -40,6 +40,6 @@ endif(CMAKE_COMPILER_IS_GNUCXX)
 set(CMAKE_CXX_FLAGS "-static ${CMAKE_CXX_FLAGS}")
 message("************************************************************************************************************************************************************")
 #execute_process(COMMAND rm -r ${configDir})
-add_executable(JudgerToTeaching main.cpp compiler/Compiler.h common/Util.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h controller/ProgramController.cpp controller/ProgramController.h common/Util.cpp controller/Pipe3.cpp controller/Pipe3.h common/Result.cpp common/Result.h common/ConfigurationTool.cpp common/ConfigurationTool.h common/JudgeConfig.cpp common/JudgeConfig.h common/Macro.h)
+add_executable(JudgerToTeaching main.cpp compiler/Compiler.h common/Util.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h controller/ProgramController.cpp controller/ProgramController.h common/Util.cpp controller/Pipe3.cpp controller/Pipe3.h common/Result.cpp common/Result.h common/ConfigurationTool.cpp common/ConfigurationTool.h common/JudgeConfig.cpp common/JudgeConfig.h common/Macro.h common/CharsetUtil.cpp common/CharsetUtil.h)
 #清理程序运行产生的文件
 #add_custom_target(clean-ets-cache-files COMMAND /usr/bin/cmake -E remove_directory "${cleanDir}")

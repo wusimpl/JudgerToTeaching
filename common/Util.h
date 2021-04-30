@@ -26,6 +26,11 @@ typedef struct Dir{
     string* files;
     int size;
 
+    Dir(){
+        files = nullptr;
+        size= 0;
+    }
+
     Dir(string directory,int s){
         dirPath = std::move(directory);
         size = s;
@@ -169,6 +174,8 @@ bool isRoot();
  * @param delimiters
  */
 void split(const string& str,vector<string>& strs,const string& delimiters = " ");
+
+
 //****************************全局函数申明完毕*******************************
 
 

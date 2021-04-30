@@ -75,7 +75,7 @@ void pipeRunImpl(PipeArgs* args){
                 case POLLEND:
                     break;
                 default:
-                    readFromFD(fds[0].fd,args->stdError);
+                    readFromFD(fds[1].fd,args->stdError);
                     args->returnCode = STDERR;
             }
     }

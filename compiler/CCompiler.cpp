@@ -33,10 +33,12 @@ CompileResult CCompiler::compile() {
         switch (args.returnCode) {
             case STDOUT:
                 compileResult.status = CompileResult ::CompileStatus::OK;
+                compileResult.compileOutput = args.stdOutput;
                 break;
             case STDERR:
                 compileResult.status = CompileResult ::CompileStatus::CE;
                 cfg->wholeResult.errorCode = WholeResult::CE;
+                compileResult.compileOutput = args.stdError;
                 break;
         }
     }else{

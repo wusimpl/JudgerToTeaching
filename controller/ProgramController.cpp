@@ -54,6 +54,8 @@ ControllerResult ProcessController::run() {
         ThreadInfo monitorThreadInfo = {subPid,config->requiredResourceLimit.realTime};
         if(pthread_attr_init(&attr) != RV_OK){
             DEBUG_PRINT("thread attribute initialization failed");
+            controllerResult.runStatus = ControllerResult::RunStatus::THREAD_CREATE_ERROR;
+            return controllerResult;
         }
         pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED); // set thread to unjoinable
 
@@ -80,6 +82,7 @@ ControllerResult ProcessController::run() {
                             DEBUG_PRINT("wait4 参数错误!")
                             break;
                     }
+                    controllerResult.runStatus = ControllerResult::RunStatus::WAIT_ERROR;
                     break;
                 }else if(waitResult == subPid) {
                     if (WIFEXITED(wstatus)) { // the child terminated normally
@@ -145,12 +148,14 @@ ControllerResult ProcessController::run() {
                         }
 
 
-                    } else if (WIFCONTINUED(wstatus)) {
+                    }
+                    else if (WIFCONTINUED(wstatus)) {
                         DEBUG_PRINT("resumed by delivery of SIGCONT.");
                     }
                 }
             }
-        }else{
+        }
+        else{
             DEBUG_PRINT("thread_create error");
             KILL_PROCESS(subPid);
             controllerResult.runStatus = ControllerResult::THREAD_CREATE_ERROR;
