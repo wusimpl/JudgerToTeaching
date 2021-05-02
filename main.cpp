@@ -53,8 +53,9 @@ int main(int argc,char* argv[]) {
             if(!cfg.testOutPath.empty()){
 
                 AnswerChecker checker(cfg.testOutPath,cfg.outputFilePath);
+                CompareResult* results;
 //                AnswerChecker::compareByByte("/root/test/output/1.out","/root/test/out/1.out");
-                checker.compareByTextByLine();
+                results = checker.compareByTextByLine();
             }
         }
 

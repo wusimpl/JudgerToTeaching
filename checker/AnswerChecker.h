@@ -19,7 +19,6 @@ typedef struct CompareResult{
     }statusCode;
 
     size_t matchingCharNum; // 与标准文本相匹配的字符数
-//    size_t wrongCharNum; // 错误的字符数
     size_t lostCharNum; // 丢失的字符数
     size_t redundantCharNum; // 多余的字符数
 
@@ -77,7 +76,10 @@ private:
     CompareResult compareByTextByLine(const char* standardTextPath,const char* checkTextPath);
 
 public:
+    //返回值不用后不需 要自己delete
     CompareResult* compareByTextByLine();
+    //返回值不用后不需要自己delete
+    CompareResult* compareByByte();
 };
 
 

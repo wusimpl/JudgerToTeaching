@@ -98,7 +98,7 @@ int getLine(FILE* file,vector<UTF8UnitWT*>* units){
 }
 
 
-size_t findUnit(const vector<UTF8UnitWT*>* units, size_t startPos, const UTF8UnitWT* unit){
+size_t findUTF8UnitWT(const vector<UTF8UnitWT*>* units, size_t startPos, const UTF8UnitWT* unit){
     if(units->size()-1 < startPos){
         return NOT_FOUND;
     }

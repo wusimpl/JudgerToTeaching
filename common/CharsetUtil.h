@@ -127,5 +127,8 @@ int getLine(FILE* file,vector<UTF8UnitWT*>* units);
     * @param unit
     * @return 找不到则返回-1,否则返回unit所在位置
     */
-size_t findUnit(const vector<UTF8UnitWT*>* units, size_t startPos, const UTF8UnitWT* unit);
+size_t findUTF8UnitWT(const vector<UTF8UnitWT*>* units, size_t startPos, const UTF8UnitWT* unit);
+
+
+
 #endif //JUDGERTOTEACHING_CHARSETUTIL_H

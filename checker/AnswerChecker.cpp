@@ -37,14 +37,19 @@ int AnswerChecker::compareByByte(const char *standardTextPath, const char *check
         {
             for (int i = 0; i < count1; ++i) {
                 if(buf1[i] != buf2[i]){
+                    fclose(stdFile);
+                    fclose(checkFile);
                     return RV_ERROR;
                 }
             }
         }else {
+            fclose(stdFile);
+            fclose(checkFile);
             return RV_ERROR;
         }
     }
-
+    fclose(stdFile);
+    fclose(checkFile);
     return RV_OK;
 }
 
@@ -91,7 +96,7 @@ CompareResult AnswerChecker::compareByTextByLine(const char *standardTextPath, c
                 p2++;
             } else {
                 size_t pos = 0;
-                pos = findUnit(&units1, p1 + 1, units2[p2]);
+                pos = findUTF8UnitWT(&units1, p1 + 1, units2[p2]);
                 if (pos == NOT_FOUND) {
                     compareResult.redundantCharNum++;
                     p2++;
@@ -116,6 +121,16 @@ CompareResult AnswerChecker::compareByTextByLine(const char *standardTextPath, c
 }
 
 CompareResult* AnswerChecker::compareByTextByLine() {
+    int size = Min(textGroup1.size,textGroup2.size);
+    auto* results = new CompareResult[size];
+    for (int i = 0; i < size; ++i) {
+        results[i] = compareByTextByLine(textGroup1.files[i].c_str(),textGroup2.files[i].c_str());
+        DEBUG_PRINT(results[i].toString());
+    }
+    return results;
+}
+
+CompareResult *AnswerChecker::compareByByte() {
     int size = Min(textGroup1.size,textGroup2.size);
     auto* results = new CompareResult[size];
     for (int i = 0; i < size; ++i) {
