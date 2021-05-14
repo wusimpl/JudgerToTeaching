@@ -17,12 +17,12 @@ private:
     scmp_filter_ctx ctx; // 系统调用过滤规则
 public:
     explicit SubProcess(JudgeConfig* cfg);
-    ~SubProcess();
+    ~SubProcess(); // 因为execve成功执行时不会返回,所以这破函数基本没啥用
 
     /**
      * 已做好，前期准备工作，正式运行用户程序
      */
-    void runUserProgram();
+    int runUserProgram();
 
 private:
 

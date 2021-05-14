@@ -29,7 +29,7 @@ using std::endl;
 #define DEBUG_PRINT(x) cout<<x<<endl; // debug 打印调试输出
 #define MAX_SYSCALL_NUMBER 256 // 系统调用配置表最大长度
 #define BLACK_LIST_MODE 1 // 系统调用黑名单模式
-#define WHITE_LIST_MODE 0 // 系统调用白黑名单模式
+#define WHITE_LIST_MODE 0 // 系统调用白名单模式
 #define KB (1024)
 #define MB (KB*1024)
 #define seconds (1000)

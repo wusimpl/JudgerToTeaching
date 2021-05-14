@@ -11,29 +11,53 @@
 
 #define Min(a,b) ((a)>=(b)?(b):(a))
 
+#define RV_WRONG 1
 
-typedef struct CompareResult{
-    enum StatusCode{
-        OK=RV_OK,
-        ERROR = RV_ERROR
-    }statusCode;
+typedef struct CompareDetail{
+    long matchingCharNum; // 与标准文本相匹配的字符数
+    long lostCharNum; // 丢失的字符数
+    long redundantCharNum; // 多余的字符数
 
-    size_t matchingCharNum; // 与标准文本相匹配的字符数
-    size_t lostCharNum; // 丢失的字符数
-    size_t redundantCharNum; // 多余的字符数
-
-    CompareResult(){
-        statusCode = OK;
+    CompareDetail(){
         matchingCharNum = lostCharNum = redundantCharNum = 0;
     }
+}CompareDetail;
 
-    string toString() const{
-        return string("{ matchingCharacters:") + std::to_string(matchingCharNum) + "\n" +
-        string("  lostCharacters:") + std::to_string(lostCharNum) + "\n" +
-        string("  redundantCharacters:") + std::to_string(redundantCharNum) + " }\n";
+typedef struct CompareResult{
+
+    /**
+     * For byte:
+     *  RV_OK:字节流相同 RV_WRONG:字节流不同 RV_ERROR:对比出现错误
+     * For char:
+     * RV_OK:无意义 RV_WRONG:无意义 RV_ERROR：对比出现错误
+     */
+    int statusCode; //RV_OK RV_WRONG RV_ERROR
+
+    double lineNumber; // 单个测试文件的行数
+
+    string testFilePath;
+
+    vector<CompareDetail*> linesDetail; // 每一行的对比数据详情
+
+
+    CompareResult(){
+        statusCode = RV_OK;
+        lineNumber = 0;
     }
+
+    ~CompareResult(){
+        for (auto & i : linesDetail) {
+            delete i;
+        }
+        linesDetail.clear();
+    }
+
 }CompareResult;
 
+
+
+#define BYTE_COMPARE_METHOD 1
+#define CHAR_COMPARE_METHOD 2
 /**
  * 答案检查器
  */
@@ -42,6 +66,10 @@ private:
     Dir textGroup1; // 第一组文本数据所在文件夹
     Dir textGroup2; // 第二组文本数据
 //    size_t size; // 每组文本的个数，要求两组数量相同 (Deprecated, this info has been included in the Dir object.)
+    int compareMethod; // 1.byte 2.char
+
+public:
+    CompareResult* compare();
 
 public:
     /**
@@ -53,7 +81,7 @@ public:
 
     /**
      * 返回每组文本的个数
-     * @return 如果两组文本数量相同，则返回真实数量，否则返回-1
+     * @return 如果两组文本数量相同，则返回真实数量，否则返回min(size1,size2)
      */
     int getSize() const;
 
@@ -64,7 +92,7 @@ private:
      * @param checkTextPath
      * @return
      */
-     int compareByByte(const char* standardTextPath,const char* checkTextPath);
+//     int compareByByte(const char* standardTextPath,const char* checkTextPath);
 
 
     /**
@@ -73,13 +101,13 @@ private:
      * @param checkTextPath
      * @return
      */
-    CompareResult compareByTextByLine(const char* standardTextPath,const char* checkTextPath);
+    CompareResult* compareByTextByLine(const char* standardTextPath,const char* checkTextPath,CompareResult* compareResult);
 
-public:
-    //返回值不用后不需 要自己delete
+private:
+    //返回值不用后不需要自己delete
     CompareResult* compareByTextByLine();
     //返回值不用后不需要自己delete
-    CompareResult* compareByByte();
+//    CompareResult* compareByByte();
 };
 
 

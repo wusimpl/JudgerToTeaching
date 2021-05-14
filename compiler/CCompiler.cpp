@@ -14,7 +14,7 @@ string CCompiler::generateCompileCommand() const {
         return string("nullptr");
     }
     stringstream ss;
-    ss << "gcc "<<"-Wall -lm "<<cfg->srcPath<<" -o "<<cfg->exePath;
+    ss << "gcc " << "-Wall " << cfg->codePath << " -o " << cfg->exePath;
     return ss.str();
 }
 

@@ -20,7 +20,8 @@ ControllerResult ProcessController::run() {
     if(getuid() != 0){
         DEBUG_PRINT("需要root权限!");
         controllerResult.runStatus = ControllerResult::PERMISSION_DENIED;
-        config->wholeResult.errorCode = WholeResult::SE;
+        controllerResult.status = 1; //SE
+//        config->wholeResult.errorCode = WholeResult::SE;
         return controllerResult;
     }
 
@@ -29,7 +30,7 @@ ControllerResult ProcessController::run() {
     struct timeval start{}; // count real time (现实世界中程序从开始到结束的时间)
     struct timeval end{};
     if(subPid == 0){//子进程代码
-        DEBUG_PRINT("子进程 running!!");
+//        DEBUG_PRINT("子进程 running!!");
         // 方便调试子进程，睡眠30s https://ftp.gnu.org/old-gnu/Manuals/gdb/html_node/gdb_25.html
         if(DEBUG_SUBPROCESS){
             sleep(30);
@@ -38,23 +39,27 @@ ControllerResult ProcessController::run() {
         SubProcess subProcess(config);
 
         kill(getpid(),SIGSTOP); // 子进程先阻塞自己，等待父进程准备好
+        ControllerResult result;
         subProcess.runUserProgram();
+        result.status = 1; //SE
+        return result;
 
     }else if (subPid > 0){ // 父进程代码
-        DEBUG_PRINT("父进程 running!!");
-        DEBUG_PRINT("sub pid:" << subPid);
+//        DEBUG_PRINT("父进程 running!!");
+//        DEBUG_PRINT("sub pid:" << subPid);
 
         if(config->requiredResourceLimit.realTime == UNLIMITED){
             DEBUG_PRINT("Danger! cpu time is unlimited, force to 1 minute.")
             config->requiredResourceLimit.realTime = 1 * minutes; //最多让其运行1分钟
         }
         pthread_t monitorThread; // 创建监视线程，超时则杀死子进程
-        pthread_t traceThread; // 创建跟踪进程，拦截exit系统调用，或最后一刻的status信息 (unused，换成在主线程中跟踪)
+//        pthread_t traceThread; // 创建跟踪进程，拦截exit系统调用，或最后一刻的status信息 (unused，换成在主线程中跟踪)
         pthread_attr_t attr;
         ThreadInfo monitorThreadInfo = {subPid,config->requiredResourceLimit.realTime};
         if(pthread_attr_init(&attr) != RV_OK){
             DEBUG_PRINT("thread attribute initialization failed");
             controllerResult.runStatus = ControllerResult::RunStatus::THREAD_CREATE_ERROR;
+            controllerResult.status = 1; //SE
             return controllerResult;
         }
         pthread_attr_setdetachstate(&attr,PTHREAD_CREATE_DETACHED); // set thread to unjoinable
@@ -83,48 +88,67 @@ ControllerResult ProcessController::run() {
                             break;
                     }
                     controllerResult.runStatus = ControllerResult::RunStatus::WAIT_ERROR;
+                    DEBUG_PRINT("WAIT ERROR");
+                    controllerResult.status = 1; //SE
                     break;
                 }else if(waitResult == subPid) {
                     if (WIFEXITED(wstatus)) { // the child terminated normally
-
+                        DEBUG_PRINT("用户程序运行完毕！");
                         // 存储运行结果与返回值
                         int returnValue = WEXITSTATUS(wstatus); // the return value of user programme
                         controllerResult.runStatus = ControllerResult::EXITED_NORMALLY;
+                        controllerResult.status = 0; //OK
                         controllerResult.returnValue = returnValue;
 
                         // 获取程序占用资源
                         gettimeofday(&end, nullptr);
-                        config->usedResourceLimit.realTime =  (TIME_VALUE(end) - TIME_VALUE(start))/1000;
-                        config->usedResourceLimit.cpuTime = R_CPU_TIME(resourceUsage)/1000;
+                        controllerResult.usedResourceLimit.realTime =  (TIME_VALUE(end) - TIME_VALUE(start))/1000;
+                        controllerResult.usedResourceLimit.cpuTime = R_CPU_TIME(resourceUsage)/1000;
                         //十分不精确的测量，已弃用，使用/proc/[pid]/status实现
-                        config->usedResourceLimit.memory = resourceUsage.ru_maxrss;
-                        config->usedResourceLimit.stack = resourceUsage.ru_isrss;
-                        config->usedResourceLimit.outputSize = 0;
+                        controllerResult.usedResourceLimit.memory = resourceUsage.ru_maxrss;
+                        controllerResult.usedResourceLimit.stack = resourceUsage.ru_isrss;
+                        controllerResult.usedResourceLimit.outputSize = 0;
 
-                        DEBUG_PRINT(config->usedResourceLimit.toString());
-                        DEBUG_PRINT("procStatus:" << subProcessExitedStatus);
+                        DEBUG_PRINT(controllerResult.usedResourceLimit.toString());
+                        DEBUG_PRINT("procStatus:" << endl << subProcessExitedStatus);
+                        string usedStack = regexStr(subProcessExitedStatus,"VmStk:[\\s]+[0-9]*[\\s]kB"); //提取stack信息
+//                        DEBUG_PRINT("usedStack:" << extractNumber(usedStack).c_str());
+                        controllerResult.usedResourceLimit.stack = (long)atoi(extractNumber(usedStack).c_str());
+                        DEBUG_PRINT(controllerResult.usedResourceLimit.stack);
+
                         break;
                     } else if (WIFSIGNALED(wstatus)) { // terminated by a signal
                         DEBUG_PRINT("terminated signal:" << WTERMSIG(wstatus));
                         switch (WTERMSIG(wstatus)) {
                             case SIGSEGV: // 栈、内存超限会被发送此信号
-                                config->wholeResult.errorCode = WholeResult::MLE;
+//                                config->wholeResult.errorCode = WholeResult::MLE;
+                                DEBUG_PRINT("MLE");
+                                controllerResult.status = 4; // MLE
                                 break;
                             case SIGXCPU: // cpu超时会被发送此信号
-                                config->wholeResult.errorCode = WholeResult::CLE;
+//                                config->wholeResult.errorCode = WholeResult::CLE;
+                                DEBUG_PRINT("CLE");
+                                controllerResult.status = 2; // CLE
                                 break;
                             case SIGXFSZ: // 写入文件的数据超限会发送次信号
-                                config->wholeResult.errorCode = WholeResult::OLE;
+                                DEBUG_PRINT("OLE");
+//                                config->wholeResult.errorCode = WholeResult::OLE;
+                                controllerResult.status = 5; // OLE
+                                break;
+                            case SIGKILL: // 多半是超时
+                                DEBUG_PRINT("RLE");
+                                controllerResult.status = 3; // RLE
                                 break;
                             default:
-                                DEBUG_PRINT("捕获到其他信号！");
+                                DEBUG_PRINT("丢！捕获到其他信号！" <<"signal:"<< WTERMSIG(wstatus));
+                                controllerResult.status = -1; //UNKNOWN
                                 break;
                         }
-
+                    break;
                     } else if (WIFSTOPPED(wstatus)) { // stopped by a signal
                         DEBUG_PRINT("stopped signal:" << WSTOPSIG(wstatus));
 
-//                        ptrace(PTRACE_GETREGS, subPid, 0, &regs); // 获取系统调用参数(主要是系统调用号)
+                        ptrace(PTRACE_GETREGS, subPid, 0, &regs); // 获取系统调用参数(主要是系统调用号)
 
                         switch (WSTOPSIG(wstatus)) {
                             case SIGCONT:
@@ -146,8 +170,6 @@ ControllerResult ProcessController::run() {
                                 }
                                 break;
                         }
-
-
                     }
                     else if (WIFCONTINUED(wstatus)) {
                         DEBUG_PRINT("resumed by delivery of SIGCONT.");
@@ -159,6 +181,7 @@ ControllerResult ProcessController::run() {
             DEBUG_PRINT("thread_create error");
             KILL_PROCESS(subPid);
             controllerResult.runStatus = ControllerResult::THREAD_CREATE_ERROR;
+            controllerResult.status = 1; // SE
         }
 
         if(pthread_cancel(monitorThread) != RV_OK){ //关闭监视线程
@@ -167,7 +190,9 @@ ControllerResult ProcessController::run() {
         }
 
     }else{
+        DEBUG_PRINT("FORK ERROR");
         controllerResult.runStatus = ControllerResult::FORK_ERROR;
+        controllerResult.status = 1; // SE
     }
     return controllerResult;
 }
@@ -176,8 +201,8 @@ ControllerResult ProcessController::run() {
 void *ProcessController::timeoutKiller(void *threadInfo){
     auto* threadInfo1 = static_cast<ThreadInfo*>(threadInfo);
     DEBUG_PRINT("monitor thread started!");
-    DEBUG_PRINT("sleep time:" << int(threadInfo1->timeout));
-    sleep(int(threadInfo1->timeout));//休眠：sleep限定的时间，sleep完毕后子进程还在运行则杀死
+    DEBUG_PRINT("sleep time:" << int(threadInfo1->timeout) << "ms");
+    usleep(int(threadInfo1->timeout)*1000);//休眠：sleep限定的时间，sleep完毕后子进程还在运行则杀死
     int returnValue = KILL_PROCESS(threadInfo1->pid);
     if(returnValue == RV_OK || returnValue == ESRCH){
         DEBUG_PRINT("进程已死亡或已杀死");

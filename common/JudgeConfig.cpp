@@ -116,3 +116,20 @@ JudgeConfig::JudgeConfig(string& configPath){
     }
 
 }
+
+JudgeConfig::JudgeConfig() {
+    compileMethod=1;
+    fileType = SourceFileType::cpp;
+    for (int & i : sysCallList) {
+        i = -1;
+    }
+    for (auto & programArg : programArgs) {
+        programArg = nullptr;
+    }
+}
+
+JudgeConfig::~JudgeConfig() {
+    for (auto & programArg : programArgs) {
+        delete programArg;
+    }
+}

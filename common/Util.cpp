@@ -88,7 +88,7 @@ Dir getFilesOfDirWithFullPath(string dirPath) {
     int i = 0;
     while ((ptr=readdir(dir))){
         if(ptr->d_type == 8){//which means that it's a file rather than a dir,link file or any other things
-            myFiles.files[i++] = dirPath.append(ptr->d_name);
+            myFiles.files[i++] = dirPath + ptr->d_name;
         }
     }
     closedir(dir);
@@ -157,7 +157,36 @@ void split(const string &str,vector<string>& tokens, const string &delimiters) {
         lastPos = str.find_first_not_of(delimiters,pos);
         pos = str.find_first_of(delimiters,lastPos);
     }
+}
 
+string regexStr(const string& content,const string& pattern){
+    string returnStr;
+    std::regex re(pattern.c_str());
+    std::smatch results;//存放结果
+    if(regex_search(content,results,re)){ //匹配成功
+        if(!results.empty()){
+            returnStr = results.str(0);
+        }
+    }
+    return returnStr;
+}
+
+string extractNumber(const string& str){
+    string result;
+    bool start = false;
+//    bool end=false;
+    for (char i : str) {
+        if(isdigit(i)){
+            start = true;
+            result+=i;
+        }else {
+            if(start==true){
+//                end = true;
+                break;
+            }
+        }
+    }
+    return result;
 }
 
 

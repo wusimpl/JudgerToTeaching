@@ -6,6 +6,8 @@
 #define JUDGERTOTEACHING_UTIL_H
 
 #include "Macro.h"
+#include <regex>
+
 
 /**
  * 源代码类型
@@ -79,13 +81,13 @@ extern std::map<string,int> SourceFileTypeMap;
 typedef struct ResourceLimit {
     double cpuTime; // 单位为 ms
     double realTime; // ms
-    size_t memory; // 单位为 byte
-    size_t stack; // byte
-    size_t outputSize; // byte
+    long memory; // 单位为 byte
+    long stack; // byte
+    long outputSize; // byte
 
     ResourceLimit(){
-        cpuTime = 10; // seconds
-        realTime = 20;// seconds
+        cpuTime = 1000; // ms
+        realTime = 2000;// ms
         memory = 5000; // KB
         outputSize = 200; // KB
         stack = 2000; // KB
@@ -175,13 +177,21 @@ bool isRoot();
  */
 void split(const string& str,vector<string>& strs,const string& delimiters = " ");
 
+/**
+ * 正则匹配第一个结果
+ * @param content
+ * @param pattern
+ * @return
+ */
+string regexStr(const string& content,const string& pattern);
 
+/**
+ * 提取字符串中的第一串的连续数字
+ * @param str
+ * @return
+ */
+string extractNumber(const string& str);
 //****************************全局函数申明完毕*******************************
-
-
-//***************************私有静态函数申明*******************************
-
-//**************************私有静态函数申明完毕*****************************
 
 
 #endif //JUDGERTOTEACHING_UTIL_H
