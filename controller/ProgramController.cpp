@@ -105,16 +105,22 @@ ControllerResult ProcessController::run() {
                         controllerResult.usedResourceLimit.realTime =  (TIME_VALUE(end) - TIME_VALUE(start))/1000;
                         controllerResult.usedResourceLimit.cpuTime = R_CPU_TIME(resourceUsage)/1000;
                         //十分不精确的测量，已弃用，使用/proc/[pid]/status实现
-                        controllerResult.usedResourceLimit.memory = resourceUsage.ru_maxrss;
-                        controllerResult.usedResourceLimit.stack = resourceUsage.ru_isrss;
+//                        controllerResult.usedResourceLimit.memory = resourceUsage.ru_maxrss;
+//                        controllerResult.usedResourceLimit.stack = resourceUsage.ru_isrss;
                         controllerResult.usedResourceLimit.outputSize = 0;
 
                         DEBUG_PRINT(controllerResult.usedResourceLimit.toString());
                         DEBUG_PRINT("procStatus:" << endl << subProcessExitedStatus);
                         string usedStack = regexStr(subProcessExitedStatus,"VmStk:[\\s]+[0-9]*[\\s]kB"); //提取stack信息
+                        string usedMemory = regexStr(subProcessExitedStatus,"VmSize:[\\s]+[0-9]*[\\s]kB");
+                        string usedData = regexStr(subProcessExitedStatus,"VmData:[\\s]+[0-9]*[\\s]kB");
+                        string exeSize = regexStr(subProcessExitedStatus,"VmExe:[\\s]+[0-9]*[\\s]kB");
 //                        DEBUG_PRINT("usedStack:" << extractNumber(usedStack).c_str());
                         controllerResult.usedResourceLimit.stack = (long)atoi(extractNumber(usedStack).c_str());
-                        DEBUG_PRINT(controllerResult.usedResourceLimit.stack);
+                        controllerResult.usedResourceLimit.memory = (long)atoi(extractNumber(usedMemory).c_str());
+                        controllerResult.usedResourceLimit.data = (long)atoi(extractNumber(usedData).c_str());
+                        controllerResult.usedResourceLimit.exeSize = (long)atoi(extractNumber(exeSize).c_str());
+//                        DEBUG_PRINT(controllerResult.usedResourceLimit.stack);
 
                         break;
                     } else if (WIFSIGNALED(wstatus)) { // terminated by a signal

@@ -84,6 +84,8 @@ typedef struct ResourceLimit {
     long memory; // 单位为 byte
     long stack; // byte
     long outputSize; // byte
+    long data; //数据段
+    long exeSize;//二进制文件大小
 
     ResourceLimit(){
         cpuTime = 1000; // ms
@@ -91,6 +93,8 @@ typedef struct ResourceLimit {
         memory = 5000; // KB
         outputSize = 200; // KB
         stack = 2000; // KB
+        data = 0;
+        exeSize = 0;
     }
 
     string toString() const{

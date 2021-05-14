@@ -82,9 +82,9 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
     JNI_NOT_NULL(testInPath);
     nativeCfg.testInPath = JstrToCstr(testInPath);
 
-    jstring testOutPath = JNI_INSTANCE_STRING_FIELD_VALUE(javaJudgeConfig, "testOutPath");
-    JNI_NOT_NULL(testOutPath);
-    nativeCfg.testOutPath = JstrToCstr(testOutPath);
+//    jstring testOutPath = JNI_INSTANCE_STRING_FIELD_VALUE(javaJudgeConfig, "testOutPath");
+//    JNI_NOT_NULL(testOutPath);
+//    nativeCfg.testOutPath = JstrToCstr(testOutPath);
 
     jstring exePath = JNI_INSTANCE_STRING_FIELD_VALUE(javaJudgeConfig, "exePath");
     JNI_NOT_NULL(exePath);
@@ -141,6 +141,8 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
             setFieldValue<double>(env,usedResourceLimit,"realTime",DOUBLE_FIELD_SIG,controllerResult.usedResourceLimit.realTime);
             setFieldValue<long>(env,usedResourceLimit,"memory",LONG_FIELD_SIG,controllerResult.usedResourceLimit.memory);
             setFieldValue<long>(env,usedResourceLimit,"stack",LONG_FIELD_SIG,controllerResult.usedResourceLimit.stack);
+            setFieldValue<long>(env,usedResourceLimit,"data",LONG_FIELD_SIG,controllerResult.usedResourceLimit.data);
+            setFieldValue<long>(env,usedResourceLimit,"exeSize",LONG_FIELD_SIG,controllerResult.usedResourceLimit.exeSize);
             setFieldValue<long>(env,usedResourceLimit,"outputSize",LONG_FIELD_SIG,controllerResult.usedResourceLimit.outputSize);
             setFieldValue<int>(env,jControllerResult,"returnValue",INT_FIELD_SIG,controllerResult.returnValue);
             break;
@@ -153,7 +155,7 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
     DeleteLocalRef(javaCfgCls);
     DeleteLocalRef(exePath);
     DeleteLocalRef(outputFilePath);
-    DeleteLocalRef(testOutPath);
+//    DeleteLocalRef(testOutPath);
     DeleteLocalRef(testInPath);
     DeleteLocalRef(requiredLimit);
 

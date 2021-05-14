@@ -154,35 +154,53 @@ bool SubProcess::restrainSystemCall() {
     return true;
 }
 
+//void SubProcess::redirectIO() {
+//    DEBUG_PRINT("重定向输入输出中...");
+//    Dir testInFiles = getFilesOfDirWithFullPath(config->testInPath);
+//    DEBUG_PRINT("testInPath:"<<config->testInPath);
+//    if(testInFiles.size > 0){
+//        DEBUG_PRINT(testInFiles.files[0].c_str());
+//        FILE* inputFile = fopen(testInFiles.files[0].c_str(),"r");
+//        if(inputFile== nullptr){
+//            DEBUG_PRINT("文件打开错误!");
+//        }
+//        openedReadFiles[0] = inputFile;
+//        if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
+//            DEBUG_PRINT("重定向错误！");
+//        }
+//    } else{
+//        DEBUG_PRINT("无标准输入文件!");
+//    }
+//
+//    Dir testOutFiles = getFilesOfDir(config->testOutPath); // 依据测试输出文件的数量来确定被测程序的输出文件
+//    if(testOutFiles.size > 0){
+//        string file = config->outputFilePath.append(testOutFiles.files[0]);
+//        DEBUG_PRINT("创建输出文件:"<<file);
+//        FILE* outputFile = fopen(file.c_str(),"w");
+//        openedWriteFiles[0] = outputFile;
+//        if(dup2(fileno(outputFile),fileno(stdout)) == -1){
+//            //error
+//            DEBUG_PRINT("重定向错误！");
+//        }
+//    }else{
+//        DEBUG_PRINT("无标准输出文件!");
+//    }
+//}
+
 void SubProcess::redirectIO() {
-    DEBUG_PRINT("重定向输入输出中...");
-    Dir testInFiles = getFilesOfDirWithFullPath(config->testInPath);
-    DEBUG_PRINT("testInPath:"<<config->testInPath);
-    if(testInFiles.size > 0){
-        DEBUG_PRINT(testInFiles.files[0].c_str());
-        FILE* inputFile = fopen(testInFiles.files[0].c_str(),"r");
-        if(inputFile== nullptr){
-            DEBUG_PRINT("文件打开错误!");
-        }
-        openedReadFiles[0] = inputFile;
-        if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
-            DEBUG_PRINT("重定向错误！");
-        }
-    } else{
-        DEBUG_PRINT("无标准输入文件!");
+    FILE* inputFile = fopen(config->testInPath.c_str(),"r");
+    if(inputFile== nullptr){
+        DEBUG_PRINT("文件打开错误!");
+    }
+    if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
+        DEBUG_PRINT("重定向错误！");
     }
 
-    Dir testOutFiles = getFilesOfDir(config->testOutPath); // 依据测试输出文件的数量来确定被测程序的输出文件
-    if(testOutFiles.size > 0){
-        string file = config->outputFilePath.append(testOutFiles.files[0]);
-        DEBUG_PRINT("创建输出文件:"<<file);
-        FILE* outputFile = fopen(file.c_str(),"w");
-        openedWriteFiles[0] = outputFile;
-        if(dup2(fileno(outputFile),fileno(stdout)) == -1){
-            //error
-            DEBUG_PRINT("重定向错误！");
-        }
-    }else{
-        DEBUG_PRINT("无标准输出文件!");
+    FILE* outputFile = fopen(config->outputFilePath.c_str(),"w");
+    if(outputFile== nullptr){
+        DEBUG_PRINT("文件打开错误!");
+    }
+    if(dup2(fileno(outputFile),fileno(stdout)) == -1){
+        DEBUG_PRINT("重定向错误！");
     }
 }
