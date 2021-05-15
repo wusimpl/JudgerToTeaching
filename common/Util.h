@@ -88,11 +88,11 @@ typedef struct ResourceLimit {
     long exeSize;//二进制文件大小
 
     ResourceLimit(){
-        cpuTime = 1000; // ms
-        realTime = 2000;// ms
-        memory = 5000; // KB
-        outputSize = 200; // KB
-        stack = 2000; // KB
+        cpuTime = 10000; // ms
+        realTime = 20000;// ms
+        memory = 50000; // KB
+        outputSize = 2000; // KB
+        stack = 20000; // KB
         data = 0;
         exeSize = 0;
     }

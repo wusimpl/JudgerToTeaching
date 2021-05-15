@@ -122,12 +122,13 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
     // requiredResourceLimit
     jobject requiredLimit = JNI_INSTANCE_FIELD_VALUE(javaJudgeConfig,RESOURCE_LIMIT_SIG,"requiredResourceLimit",Object);
     JNI_NOT_NULL(requiredLimit);
-
-    nativeCfg.requiredResourceLimit.cpuTime = getFieldValue<double>(env,requiredLimit,"cpuTime",DOUBLE_FIELD_SIG);
-    nativeCfg.requiredResourceLimit.realTime = getFieldValue<double>(env,requiredLimit,"realTime",DOUBLE_FIELD_SIG);
-    nativeCfg.requiredResourceLimit.memory = getFieldValue<long>(env,requiredLimit,"memory",LONG_FIELD_SIG);
-    nativeCfg.requiredResourceLimit.stack = getFieldValue<long>(env,requiredLimit,"stack",LONG_FIELD_SIG);
-    nativeCfg.requiredResourceLimit.outputSize = getFieldValue<long>(env,requiredLimit,"outputSize",LONG_FIELD_SIG);
+    if(requiredLimit != nullptr){
+        nativeCfg.requiredResourceLimit.cpuTime = getFieldValue<double>(env,requiredLimit,"cpuTime",DOUBLE_FIELD_SIG);
+        nativeCfg.requiredResourceLimit.realTime = getFieldValue<double>(env,requiredLimit,"realTime",DOUBLE_FIELD_SIG);
+        nativeCfg.requiredResourceLimit.memory = getFieldValue<long>(env,requiredLimit,"memory",LONG_FIELD_SIG);
+        nativeCfg.requiredResourceLimit.stack = getFieldValue<long>(env,requiredLimit,"stack",LONG_FIELD_SIG);
+        nativeCfg.requiredResourceLimit.outputSize = getFieldValue<long>(env,requiredLimit,"outputSize",LONG_FIELD_SIG);
+    }
 
     ProcessController controller(&nativeCfg);
     ControllerResult controllerResult;

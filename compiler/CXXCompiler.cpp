@@ -21,7 +21,7 @@ string CXXCompiler::generateCompileCommand() const {
                     ss<<dir.files[i];
                 }
             }
-            ss<<" -o "<< cfg->exePath<<"main";
+            ss<<" -o "<< cfg->exePath<<"main"; //二进制文件默认为main
             break;
         case 2: // makefile.txt
             ss << "cd "<<cfg->codePath<<" && "; // 必须是codePath而非exePath，make会在当前目录寻找源文件

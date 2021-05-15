@@ -188,19 +188,24 @@ bool SubProcess::restrainSystemCall() {
 //}
 
 void SubProcess::redirectIO() {
-    FILE* inputFile = fopen(config->testInPath.c_str(),"r");
-    if(inputFile== nullptr){
-        DEBUG_PRINT("文件打开错误!");
-    }
-    if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
-        DEBUG_PRINT("重定向错误！");
+    if(!config->testInPath.empty()){
+        FILE* inputFile = fopen(config->testInPath.c_str(),"r");
+        if(inputFile== nullptr){
+            DEBUG_PRINT("文件打开错误!");
+        }
+        if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
+            DEBUG_PRINT("重定向错误！");
+        }
     }
 
-    FILE* outputFile = fopen(config->outputFilePath.c_str(),"w");
-    if(outputFile== nullptr){
-        DEBUG_PRINT("文件打开错误!");
+    if(!config->outputFilePath.empty()){
+        FILE* outputFile = fopen(config->outputFilePath.c_str(),"w");
+        if(outputFile== nullptr){
+            DEBUG_PRINT("文件打开错误!");
+        }
+        if(dup2(fileno(outputFile),fileno(stdout)) == -1){
+            DEBUG_PRINT("重定向错误！");
+        }
     }
-    if(dup2(fileno(outputFile),fileno(stdout)) == -1){
-        DEBUG_PRINT("重定向错误！");
-    }
+
 }
