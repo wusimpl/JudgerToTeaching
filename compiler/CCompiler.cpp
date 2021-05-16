@@ -27,7 +27,7 @@ CompileResult CCompiler::compile() {
     CompileResult compileResult;
     string cmd = generateCompileCommand();
     PipeArgs args = {};
-
+//    int returnValue = system(cmd.c_str()); // 0:成功 非0:失败
     int returnValue = execShellCommandPlus(cmd,static_cast<void*>(&args));//执行编译命令
     if(returnValue == RV_OK){
         switch (args.returnCode) {
@@ -37,7 +37,7 @@ CompileResult CCompiler::compile() {
                 break;
             case STDERR:
                 compileResult.status = CompileResult ::CompileStatus::CE;
-                cfg->wholeResult.errorCode = WholeResult::CE;
+//                cfg->wholeResult.errorCode = WholeResult::CE;
                 compileResult.compileOutput = args.stdError;
                 break;
         }

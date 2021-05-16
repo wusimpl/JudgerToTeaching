@@ -25,8 +25,7 @@ int pipe3(const string& cmd,Pipe3Run pipe3Run,void* args){
             dup2(pipes[STDERR][WRITE],STDERR_FILENO);
 
             closeAll();
-
-            execl( "/bin/sh", "sh", "-c", cmd.c_str(), nullptr);
+            execl( "/bin/sh","sh","-c", cmd.c_str(), nullptr);
         }else{ //parent process
             close(pipes[STDIN][READ]);
             close(pipes[STDOUT][WRITE]);

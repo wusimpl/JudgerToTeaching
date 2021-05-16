@@ -18,7 +18,7 @@ string CXXCompiler::generateCompileCommand() const {
             for (int i = 0; i < dir.size; ++i) {
                 if( dir.files[i].find(".cpp")!=string::npos ||
                     dir.files[i].find(".c")!=string::npos){
-                    ss<<dir.files[i];
+                    ss<<dir.files[i]<<" ";
                 }
             }
             ss<<" -o "<< cfg->exePath<<"main"; //二进制文件默认为main
@@ -34,7 +34,7 @@ string CXXCompiler::generateCompileCommand() const {
             }
             ss << " && "<<"mv " << cfg->codePath << "main " << cfg->exePath <<"main";
         case 3: //CMakeLists.txt
-        //累了，不想实现了
+
             break;
     }
     DEBUG_PRINT("编译命令：" << ss.str());
