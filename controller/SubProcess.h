@@ -19,6 +19,8 @@ public:
     explicit SubProcess(JudgeConfig* cfg);
     ~SubProcess(); // 因为execve成功执行时不会返回,所以这破函数基本没啥用
 
+    static void xcpuSignalHandler(int sig);
+
     /**
      * 已做好，前期准备工作，正式运行用户程序
      */

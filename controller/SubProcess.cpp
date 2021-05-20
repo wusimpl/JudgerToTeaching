@@ -7,6 +7,7 @@
 #include <linux/seccomp.h>
 #include <sys/prctl.h>
 #include "SeccompRules.h"
+#include <signal.h>
 #define AddSysCallRule(sysCallNumber) \
     seccomp_rule_add(ctx,config->fileType==WHITE_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
 
@@ -22,6 +23,8 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     ptrace(PTRACE_TRACEME);
     //重定向输入输出
     redirectIO();
+    //信号捕捉
+    signal(SIGXCPU,xcpuSignalHandler);
     //配置系统调用过滤规则
 //    restrainSystemCall();
 }
@@ -41,7 +44,8 @@ void SubProcess::setResourceLimit() {
     //超出软限制会被发送SIGXCPU信号，如果没有捕获该信号，则被杀死
     if(config->requiredResourceLimit.cpuTime != UNLIMITED){ // cpu time:in seconds
         // in seconds
-        rlimit cpu = {unsigned(config->requiredResourceLimit.cpuTime), unsigned(config->requiredResourceLimit.cpuTime)};
+        rlimit cpu = {unsigned(config->requiredResourceLimit.cpuTime/1000), unsigned(config->requiredResourceLimit.cpuTime/200)};
+        DEBUG_PRINT(cpu.rlim_cur<<" "<<cpu.rlim_max);
         if(SetRLimit_X(CPU,cpu) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
@@ -154,38 +158,6 @@ bool SubProcess::restrainSystemCall() {
     return true;
 }
 
-//void SubProcess::redirectIO() {
-//    DEBUG_PRINT("重定向输入输出中...");
-//    Dir testInFiles = getFilesOfDirWithFullPath(config->testInPath);
-//    DEBUG_PRINT("testInPath:"<<config->testInPath);
-//    if(testInFiles.size > 0){
-//        DEBUG_PRINT(testInFiles.files[0].c_str());
-//        FILE* inputFile = fopen(testInFiles.files[0].c_str(),"r");
-//        if(inputFile== nullptr){
-//            DEBUG_PRINT("文件打开错误!");
-//        }
-//        openedReadFiles[0] = inputFile;
-//        if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
-//            DEBUG_PRINT("重定向错误！");
-//        }
-//    } else{
-//        DEBUG_PRINT("无标准输入文件!");
-//    }
-//
-//    Dir testOutFiles = getFilesOfDir(config->testOutPath); // 依据测试输出文件的数量来确定被测程序的输出文件
-//    if(testOutFiles.size > 0){
-//        string file = config->outputFilePath.append(testOutFiles.files[0]);
-//        DEBUG_PRINT("创建输出文件:"<<file);
-//        FILE* outputFile = fopen(file.c_str(),"w");
-//        openedWriteFiles[0] = outputFile;
-//        if(dup2(fileno(outputFile),fileno(stdout)) == -1){
-//            //error
-//            DEBUG_PRINT("重定向错误！");
-//        }
-//    }else{
-//        DEBUG_PRINT("无标准输出文件!");
-//    }
-//}
 
 void SubProcess::redirectIO() {
     if(!config->testInPath.empty()){
@@ -208,4 +180,9 @@ void SubProcess::redirectIO() {
         }
     }
 
+}
+
+void SubProcess::xcpuSignalHandler(int sig) {
+    DEBUG_PRINT("SIGUSER1");
+    kill(getpid(),SIGUSR1); //通知父进程
 }

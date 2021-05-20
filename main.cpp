@@ -124,6 +124,7 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
     JNI_NOT_NULL(requiredLimit);
     if(requiredLimit != nullptr){
         nativeCfg.requiredResourceLimit.cpuTime = getFieldValue<double>(env,requiredLimit,"cpuTime",DOUBLE_FIELD_SIG);
+//        DEBUG_PRINT("cpu time limited:" << nativeCfg.requiredResourceLimit.cpuTime);
         nativeCfg.requiredResourceLimit.realTime = getFieldValue<double>(env,requiredLimit,"realTime",DOUBLE_FIELD_SIG);
         nativeCfg.requiredResourceLimit.memory = getFieldValue<long>(env,requiredLimit,"memory",LONG_FIELD_SIG);
         nativeCfg.requiredResourceLimit.stack = getFieldValue<long>(env,requiredLimit,"stack",LONG_FIELD_SIG);

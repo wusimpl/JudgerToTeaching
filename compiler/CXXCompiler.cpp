@@ -33,6 +33,7 @@ string CXXCompiler::generateCompileCommand() const {
                 }
             }
             ss << " && "<<"mv " << cfg->codePath << "main " << cfg->exePath <<"main";
+            break;
         case 3: //CMakeLists.txt
 
             break;

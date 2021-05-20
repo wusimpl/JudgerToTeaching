@@ -47,7 +47,7 @@ ControllerResult ProcessController::run() {
     }else if (subPid > 0){ // 父进程代码
 //        DEBUG_PRINT("父进程 running!!");
 //        DEBUG_PRINT("sub pid:" << subPid);
-
+        usleep(1000);
         if(config->requiredResourceLimit.realTime == UNLIMITED){
             DEBUG_PRINT("Danger! cpu time is unlimited, force to 1 minute.")
             config->requiredResourceLimit.realTime = 1 * minutes; //最多让其运行1分钟
@@ -71,6 +71,10 @@ ControllerResult ProcessController::run() {
             string subProcessExitedStatus; // 子线程最后一刻(exit调用前)的/proc/[pid]/status状态信息
             struct user_regs_struct regs{};
             bool sysCallStatus = SysCallIn;
+
+            bool SIGXCPUKilled = false;
+            bool SIGSEGVKilled = false;
+            bool SIGABRTKilled = false;
 
             while(true){
                 ptrace(PTRACE_SYSCALL, subPid, nullptr, nullptr); // 跟踪子进程的系统调用
@@ -109,8 +113,8 @@ ControllerResult ProcessController::run() {
 //                        controllerResult.usedResourceLimit.stack = resourceUsage.ru_isrss;
                         controllerResult.usedResourceLimit.outputSize = 0;
 
-                        DEBUG_PRINT(controllerResult.usedResourceLimit.toString());
-                        DEBUG_PRINT("procStatus:" << endl << subProcessExitedStatus);
+//                        DEBUG_PRINT(controllerResult.usedResourceLimit.toString());
+//                        DEBUG_PRINT("procStatus:" << endl << subProcessExitedStatus);
                         string usedStack = regexStr(subProcessExitedStatus,"VmStk:[\\s]+[0-9]*[\\s]kB"); //提取stack信息
                         string usedMemory = regexStr(subProcessExitedStatus,"VmSize:[\\s]+[0-9]*[\\s]kB");
                         string usedData = regexStr(subProcessExitedStatus,"VmData:[\\s]+[0-9]*[\\s]kB");
@@ -126,25 +130,41 @@ ControllerResult ProcessController::run() {
                     } else if (WIFSIGNALED(wstatus)) { // terminated by a signal
                         DEBUG_PRINT("terminated signal:" << WTERMSIG(wstatus));
                         switch (WTERMSIG(wstatus)) {
-                            case SIGSEGV: // 栈、内存超限会被发送此信号
-//                                config->wholeResult.errorCode = WholeResult::MLE;
-                                DEBUG_PRINT("MLE");
-                                controllerResult.status = 4; // MLE
-                                break;
-                            case SIGXCPU: // cpu超时会被发送此信号
-//                                config->wholeResult.errorCode = WholeResult::CLE;
-                                DEBUG_PRINT("CLE");
-                                controllerResult.status = 2; // CLE
-                                break;
+//                            case SIGSEGV: // 栈、内存超限会被发送此信号
+////                                config->wholeResult.errorCode = WholeResult::MLE;
+//                                DEBUG_PRINT("MLE");
+//                                controllerResult.status = 4; // MLE
+//                                break;
+//                            case SIGXCPU: // cpu超时会被发送此信号
+////                                config->wholeResult.errorCode = WholeResult::CLE;
+//                                DEBUG_PRINT("CLE");
+//                                controllerResult.status = 2; // CLE
+//                                break;
                             case SIGXFSZ: // 写入文件的数据超限会发送次信号
                                 DEBUG_PRINT("OLE");
 //                                config->wholeResult.errorCode = WholeResult::OLE;
                                 controllerResult.status = 5; // OLE
                                 break;
-                            case SIGKILL: // 多半是超时
-                                DEBUG_PRINT("RLE");
-                                controllerResult.status = 3; // RLE
+                            case SIGKILL:
+//                                gettimeofday(&end, nullptr);
+//                                if(((TIME_VALUE(end) - TIME_VALUE(start))/1000) < config->requiredResourceLimit.realTime){ // cpu time exceeded
+//                                    DEBUG_PRINT("CLE");
+//                                    controllerResult.status = 2; // CLE
+//                                }else{
+                                    DEBUG_PRINT("RLE");
+                                    controllerResult.status = 3; // RLE
+//                                }
                                 break;
+//                            case SIGUSR1: // SIGXCPU
+//                                kill(subPid,SIGKILL);
+//                                DEBUG_PRINT("CLE");
+//                                controllerResult.status = 2; // CLE
+//                                break;
+//                            case SIGUSR2: // 栈、内存超限会被发送此信号 //SIGSEGV
+////                                config->wholeResult.errorCode = WholeResult::MLE;
+//                                DEBUG_PRINT("MLE");
+//                                controllerResult.status = 4; // MLE
+//                                break;
                             default:
                                 DEBUG_PRINT("丢！捕获到其他信号！" <<"signal:"<< WTERMSIG(wstatus));
                                 controllerResult.status = -1; //UNKNOWN
@@ -157,6 +177,26 @@ ControllerResult ProcessController::run() {
                         ptrace(PTRACE_GETREGS, subPid, 0, &regs); // 获取系统调用参数(主要是系统调用号)
 
                         switch (WSTOPSIG(wstatus)) {
+                            if(WSTOPSIG(wstatus)!=5){
+                                DEBUG_PRINT(WSTOPSIG(wstatus));
+                            }
+                           case SIGXCPU:
+                                kill(subPid,SIGKILL);
+                                DEBUG_PRINT("CLE");
+                                SIGXCPUKilled = true;
+                                controllerResult.status = 2; // CLE
+                                break;
+                            case SIGSEGV:
+                                kill(subPid,SIGKILL);
+                                DEBUG_PRINT("SIGSEGV");
+                                SIGSEGVKilled = true;
+                                controllerResult.status = 4; // MLE
+                                break;
+                            case SIGABRT:
+                                kill(subPid,SIGKILL);
+                                DEBUG_PRINT("SIGABRT");
+                                SIGABRTKilled = true;
+                                controllerResult.status = 6; // RE
                             case SIGCONT:
                                 break;
                             case SIGSTOP: // 子进程阻塞了自己，运行到这里子进程就可以开始运行用户代码了
@@ -175,6 +215,9 @@ ControllerResult ProcessController::run() {
                                     }
                                 }
                                 break;
+                        }
+                        if(SIGXCPUKilled || SIGSEGVKilled || SIGABRTKilled){
+                            break;
                         }
                     }
                     else if (WIFCONTINUED(wstatus)) {
