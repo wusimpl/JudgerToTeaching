@@ -34,7 +34,8 @@ void SubProcess::setResourceLimit() {
     //超出限制会被发送SIGSEGV信号杀死进程
     if(config->requiredResourceLimit.memory != UNLIMITED){ // in KB
         // in bytes
-        rlimit as = {static_cast<rlim_t>(config->requiredResourceLimit.memory*KB), static_cast<rlim_t>(config->requiredResourceLimit.memory*KB)}; //max memory size
+        rlimit as = {static_cast<rlim_t>(config->requiredResourceLimit.memory*KB), static_cast<rlim_t>(config->requiredResourceLimit.memory*KB*2)}; //max memory size
+        DEBUG_PRINT("限制内存大小"<<config->requiredResourceLimit.memory*KB<<"bytes");
         if(SetRLimit_X(AS,as) != 0){
             DEBUG_PRINT("资源限制错误!");
             return;
@@ -53,21 +54,21 @@ void SubProcess::setResourceLimit() {
     }
 
     //SIGSEGV would be sent
-    if(config->requiredResourceLimit.stack != UNLIMITED){
-        rlimit stack = {static_cast<rlim_t>(config->requiredResourceLimit.stack*KB), static_cast<rlim_t>(config->requiredResourceLimit.stack*KB)};
-        if(SetRLimit_X(STACK,stack) != 0){
-            DEBUG_PRINT("资源限制错误!");
-            return;
-        }
-    }
-    // 超出限制被发送SIGXFSZ信号
-    if(config->requiredResourceLimit.outputSize != UNLIMITED){
-        rlimit fsize = {static_cast<rlim_t>(config->requiredResourceLimit.outputSize*KB), static_cast<rlim_t>(config->requiredResourceLimit.outputSize*KB)};
-        if(SetRLimit_X(FSIZE,fsize) != 0){
-            DEBUG_PRINT("资源限制错误!");
-            return;
-        }
-    }
+//    if(config->requiredResourceLimit.stack != UNLIMITED){
+//        rlimit stack = {static_cast<rlim_t>(config->requiredResourceLimit.stack*KB), static_cast<rlim_t>(config->requiredResourceLimit.stack*KB*2)};
+//        if(SetRLimit_X(STACK,stack) != 0){
+//            DEBUG_PRINT("资源限制错误!");
+//            return;
+//        }
+//    }
+//    // 超出限制被发送SIGXFSZ信号
+//    if(config->requiredResourceLimit.outputSize != UNLIMITED){
+//        rlimit fsize = {static_cast<rlim_t>(config->requiredResourceLimit.outputSize*KB), static_cast<rlim_t>(config->requiredResourceLimit.outputSize*KB*2)};
+//        if(SetRLimit_X(FSIZE,fsize) != 0){
+//            DEBUG_PRINT("资源限制错误!");
+//            return;
+//        }
+//    }
 }
 
 int SubProcess::runUserProgram() {

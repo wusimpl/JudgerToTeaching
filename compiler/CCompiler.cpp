@@ -14,7 +14,7 @@ string CCompiler::generateCompileCommand() const {
         return string("nullptr");
     }
     stringstream ss;
-    ss << "gcc " << "-Wall " << cfg->codePath << " -o " << cfg->exePath;
+    ss << "gcc " << cfg->codePath << " -o " << cfg->exePath;
     return ss.str();
 }
 
@@ -38,12 +38,14 @@ CompileResult CCompiler::compile() {
                 mainExists = true;
             }
         }
+
+        if(!mainExists){
+            compileResult.status = CompileResult ::CompileStatus::CE;
+            compileResult.compileOutput = "找不到main文件!请检查makefile文件是否编写正确！";
+            return compileResult;
+        }
     }
-    if(!mainExists){
-        compileResult.status = CompileResult ::CompileStatus::CE;
-        compileResult.compileOutput = "找不到main文件!请检查makefile文件是否编写正确！";
-        return compileResult;
-    }
+
 
     if(returnValue == RV_OK){
         switch (args.returnCode) {
