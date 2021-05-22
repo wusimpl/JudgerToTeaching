@@ -172,14 +172,14 @@ ControllerResult ProcessController::run() {
                         }
                     break;
                     } else if (WIFSTOPPED(wstatus)) { // stopped by a signal
-//                        DEBUG_PRINT("stopped signal:" << WSTOPSIG(wstatus));
+                        DEBUG_PRINT("stopped signal:" << WSTOPSIG(wstatus));
 
                         ptrace(PTRACE_GETREGS, subPid, 0, &regs); // 获取系统调用参数(主要是系统调用号)
 
                         switch (WSTOPSIG(wstatus)) {
-                            if(WSTOPSIG(wstatus)!=5){
-                                DEBUG_PRINT(WSTOPSIG(wstatus));
-                            }
+                            case SIGSYS:
+                                DEBUG_PRINT("错误的系统调用! errno:"<<errno);
+                                break;
                            case SIGXCPU:
                                 kill(subPid,SIGKILL);
                                 DEBUG_PRINT("CLE");

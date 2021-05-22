@@ -35,7 +35,6 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_comp
         case none:
             break;
         case c:
-            break;
         case cpp:
             compiler = new CXXCompiler(&nativeCfg);
             break;

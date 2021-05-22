@@ -19,14 +19,14 @@ SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
     ctx = nullptr;
     //资源限制
     setResourceLimit();
-    //trace me
-    ptrace(PTRACE_TRACEME);
     //重定向输入输出
     redirectIO();
     //信号捕捉
-    signal(SIGXCPU,xcpuSignalHandler);
+//    signal(SIGXCPU,xcpuSignalHandler);
     //配置系统调用过滤规则
 //    restrainSystemCall();
+    //trace me
+    ptrace(PTRACE_TRACEME);
 }
 
 void SubProcess::setResourceLimit() {
@@ -100,56 +100,43 @@ SubProcess::~SubProcess() {
             break;
         }
     }
-    // 释放系统调用过滤器
-//    if(ctx != nullptr){
-//        seccomp_release(ctx);
-//    }
 }
 
 bool SubProcess::restrainSystemCall() {
-    int syscalls_whitelist[] = {SCMP_SYS(read), SCMP_SYS(fstat),
-                                SCMP_SYS(mmap), SCMP_SYS(mprotect),
-                                SCMP_SYS(munmap), SCMP_SYS(uname),
-                                SCMP_SYS(arch_prctl), SCMP_SYS(brk),
-                                SCMP_SYS(access), SCMP_SYS(exit_group),
-                                SCMP_SYS(close), SCMP_SYS(readlink),
-                                SCMP_SYS(sysinfo), SCMP_SYS(write),
-                                SCMP_SYS(writev), SCMP_SYS(lseek),
-                                SCMP_SYS(clock_gettime), SCMP_SYS(ptrace),
+//    int syscalls_whitelist[] = {SCMP_SYS(read), SCMP_SYS(fstat),
+//                                SCMP_SYS(mmap), SCMP_SYS(mprotect),
+//                                SCMP_SYS(munmap), SCMP_SYS(uname),
+//                                SCMP_SYS(arch_prctl), SCMP_SYS(brk),
+//                                SCMP_SYS(access), SCMP_SYS(exit_group),
+//                                SCMP_SYS(close), SCMP_SYS(readlink),
+//                                SCMP_SYS(sysinfo), SCMP_SYS(write),
+//                                SCMP_SYS(writev), SCMP_SYS(lseek),
+//                                SCMP_SYS(clock_gettime), SCMP_SYS(ptrace),
+//                                SCMP_SYS(execve)};
+    int syscalls_whitelist[] = {
+                                SCMP_SYS(brk),
+                                SCMP_SYS(exit_group),
+                                SCMP_SYS(ptrace),
                                 SCMP_SYS(execve)};
 
     int syscalls_whitelist_length = sizeof(syscalls_whitelist) / sizeof(int);
 
-    DEBUG_PRINT("限制系统调用中...");
-    ctx = seccomp_init(SCMP_ACT_KILL); // 黑白名单模式设置;
+//    DEBUG_PRINT("限制系统调用中...");
+    ctx = seccomp_init(SCMP_ACT_ERRNO(1000)); // 黑白名单模式设置;
+
+    // 必须允许的系统调用
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(rt_sigreturn), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(exit), 0);
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(read), 0); //scanf is allowed
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(write), 0); //printf is allowed
+    seccomp_rule_add(ctx, SCMP_ACT_ALLOW, SCMP_SYS(execve), 1,
+                     SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t) config->exePath.c_str())); // executing user program specified by exePath is allowed
+
+
     if(ctx == nullptr){
         DEBUG_PRINT("seccomp初始化失败");
         return false;
     }
-
-    for (int i = 0; i < syscalls_whitelist_length; i++) {
-        if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, syscalls_whitelist[i], 0) != 0) {
-            return LOAD_SECCOMP_FAILED;
-        }
-    }
-//
-//    int rv; // return value
-//    for (int sysCallNumber : config->sysCallList) {
-//        if(sysCallNumber < 0){
-//            return true;
-//        }else {
-//            DEBUG_PRINT("添加系统调用规则：" << sysCallNumber);
-//            rv = AddSysCallRule(sysCallNumber);
-////            rv =  seccomp_rule_add(ctx,config->sysCallFilterMode == BLACK_LIST_MODE ? SCMP_ACT_KILL : SCMP_ACT_ALLOW,sysCallNumber,0); // syscallNumber必须由SCMP_SYS()宏来获得
-//            if(rv < RV_OK){
-//                DEBUG_PRINT("系统调用设置出错！请检查系统调用表");
-//                DEBUG_PRINT("rv:" << rv);
-//                DEBUG_PRINT("errno:" << errno);
-//                return false;
-//            }
-//        }
-
-//    }
 
     if(seccomp_load(ctx) != RV_OK){
         DEBUG_PRINT("seccomp load error!");
