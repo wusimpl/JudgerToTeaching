@@ -52,47 +52,14 @@ typedef struct ControllerResult{
     * 4: MLE, //Memory Limited Error
     * 5: OLE, //Output Limited Error, 输出文件的数据过大
     * 6: RE, //Runtime Error
+    * 7: EE, //Exe Error 找不到可执行文件。该错误只在Java代码中产生(Do not use it in c/cpp code)
+    * 8: IS, //illegal syscall
     */
     int status;
     int returnValue; // 用户程序返回值
     ResourceLimit usedResourceLimit;
 
 }ControllerResult;
-
-
-/*
-**
-* 整个判题流程的评判结果信息
-*/
-typedef struct WholeResult{
-    enum ErrorCode{
-        NONE=-1, //初始状态
-        CE=0, //Compile Error
-
-        CLE, //Cpu Time Limited Error
-        RLE, //Real Time Limited Error
-        MLE, //Memory Limited Error
-        OLE, //Output Limited Error, 输出文件的数据过大
-        RE, //Runtime Error
-        RF, //Restricted Function, 调用了危险的函数
-
-        WA, //Wrong Answer
-        PC, //Partially Correct, 通过了部分测试数据
-        AC, //Accepted
-        PE, //Presentation Error, 输出格式错误(可能是空格、换行、数值精度等未控制好)
-
-        SE //System Error, 评判系统内部错误
-
-    }errorCode;
-
-    CompileResult compileResult{};
-    ControllerResult controllerResult{};
-
-    WholeResult(){
-        errorCode = NONE;
-    }
-
-}WholeResult;
 
 
 #endif //JUDGERTOTEACHING_RESULT_H

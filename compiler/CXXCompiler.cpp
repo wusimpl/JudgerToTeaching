@@ -14,7 +14,7 @@ string CXXCompiler::generateCompileCommand() const {
     Dir dir = getFilesOfDirWithFullPath(cfg->codePath);
     switch (cfg->compileMethod) {
         case 1: // 普通编译
-            ss <<"/usr/bin/g++ -std=c++11 ";
+            ss <<"/usr/bin/g++ -w -std=c++11 ";
             for (int i = 0; i < dir.size; ++i) {
                 if( dir.files[i].find(".cpp")!=string::npos ||
                     dir.files[i].find(".c")!=string::npos){

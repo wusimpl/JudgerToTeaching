@@ -4,32 +4,30 @@
 
 #include "SubProcess.h"
 #include <sys/ptrace.h>
-#include <linux/seccomp.h>
-#include <sys/prctl.h>
 #include "SeccompRules.h"
 #include <signal.h>
+#include <fcntl.h>
 #define AddSysCallRule(sysCallNumber) \
     seccomp_rule_add(ctx,config->fileType==WHITE_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
 
-SubProcess::SubProcess(JudgeConfig *cfg):config(cfg) {
+SubProcess::SubProcess(JudgeConfig *cfg,int processId):config(cfg) {
     //变量初始化
     for (int i = 0; i < MAX_TEST_FILE_NUMBER; ++i) {
         openedReadFiles[i] = openedWriteFiles[i] = nullptr;
     }
     ctx = nullptr;
+    this->pid = processId;
     //资源限制
-    setResourceLimit();
-    //trace me
+    initSuccess = setResourceLimit();
+    //traceable enabled
     ptrace(PTRACE_TRACEME);
     //重定向输入输出
-    redirectIO();
-    //信号捕捉
-    signal(SIGXCPU,xcpuSignalHandler);
+    initSuccess = redirectIO();
     //配置系统调用过滤规则
-//    restrainSystemCall();
+    initSuccess = restrainSystemCall();
 }
 
-void SubProcess::setResourceLimit() {
+int SubProcess::setResourceLimit() {
     DEBUG_PRINT("设置资源限制中...");
     //超出限制会被发送SIGSEGV信号杀死进程
     if(config->requiredResourceLimit.memory != UNLIMITED){ // in KB
@@ -38,7 +36,7 @@ void SubProcess::setResourceLimit() {
         DEBUG_PRINT("限制内存大小"<<config->requiredResourceLimit.memory*KB<<"bytes");
         if(SetRLimit_X(AS,as) != 0){
             DEBUG_PRINT("资源限制错误!");
-            return;
+            return false;
         }
     }
 
@@ -49,7 +47,7 @@ void SubProcess::setResourceLimit() {
         DEBUG_PRINT(cpu.rlim_cur<<" "<<cpu.rlim_max);
         if(SetRLimit_X(CPU,cpu) != 0){
             DEBUG_PRINT("资源限制错误!");
-            return;
+            return false;
         }
     }
 
@@ -69,6 +67,7 @@ void SubProcess::setResourceLimit() {
 //            return;
 //        }
 //    }
+    return true;
 }
 
 int SubProcess::runUserProgram() {
@@ -106,49 +105,43 @@ SubProcess::~SubProcess() {
 //    }
 }
 
-bool SubProcess::restrainSystemCall() {
-    int syscalls_whitelist[] = {SCMP_SYS(read), SCMP_SYS(fstat),
-                                SCMP_SYS(mmap), SCMP_SYS(mprotect),
-                                SCMP_SYS(munmap), SCMP_SYS(uname),
-                                SCMP_SYS(arch_prctl), SCMP_SYS(brk),
-                                SCMP_SYS(access), SCMP_SYS(exit_group),
-                                SCMP_SYS(close), SCMP_SYS(readlink),
-                                SCMP_SYS(sysinfo), SCMP_SYS(write),
-                                SCMP_SYS(writev), SCMP_SYS(lseek),
-                                SCMP_SYS(clock_gettime), SCMP_SYS(ptrace),
-                                SCMP_SYS(execve)};
+int SubProcess::restrainSystemCall() {
+    int syscallWhiteList[] = {
+            SCMP_SYS(write),SCMP_SYS(read), // allow printf and write
+            SCMP_SYS(mmap), SCMP_SYS(munmap),SCMP_SYS(brk), // allow memory allocation and free
+            SCMP_SYS(exit_group),SCMP_SYS(rt_sigreturn), // allow exit
+            SCMP_SYS(clock_gettime) // allow get time
+    };
 
-    int syscalls_whitelist_length = sizeof(syscalls_whitelist) / sizeof(int);
+    ctx = seccomp_init(SCMP_ACT_KILL); // init
 
-    DEBUG_PRINT("限制系统调用中...");
-    ctx = seccomp_init(SCMP_ACT_KILL); // 黑白名单模式设置;
     if(ctx == nullptr){
         DEBUG_PRINT("seccomp初始化失败");
         return false;
     }
 
-    for (int i = 0; i < syscalls_whitelist_length; i++) {
-        if (seccomp_rule_add(ctx, SCMP_ACT_ALLOW, syscalls_whitelist[i], 0) != 0) {
-            return LOAD_SECCOMP_FAILED;
+    //必须允许的系统调用
+    int rv;
+    for (int i = 0; i < sizeof(syscallWhiteList); ++i) {
+        rv = seccomp_rule_add(ctx,SCMP_ACT_ALLOW,syscallWhiteList[i],0);
+        if(rv!=0){
+            return false;
         }
     }
-//
-//    int rv; // return value
-//    for (int sysCallNumber : config->sysCallList) {
-//        if(sysCallNumber < 0){
-//            return true;
-//        }else {
-//            DEBUG_PRINT("添加系统调用规则：" << sysCallNumber);
-//            rv = AddSysCallRule(sysCallNumber);
-////            rv =  seccomp_rule_add(ctx,config->sysCallFilterMode == BLACK_LIST_MODE ? SCMP_ACT_KILL : SCMP_ACT_ALLOW,sysCallNumber,0); // syscallNumber必须由SCMP_SYS()宏来获得
-//            if(rv < RV_OK){
-//                DEBUG_PRINT("系统调用设置出错！请检查系统调用表");
-//                DEBUG_PRINT("rv:" << rv);
-//                DEBUG_PRINT("errno:" << errno);
-//                return false;
-//            }
-//        }
+    //allow subprocess to stop itself.
+    seccomp_rule_add(ctx,SCMP_ACT_ALLOW, SCMP_SYS(kill),2,
+                     SCMP_A0( SCMP_CMP_EQ, static_cast<scmp_datum_t>(pid) ),
+                     SCMP_A1( SCMP_CMP_EQ, (scmp_datum_t)SIGSTOP ) );
+    //允许执行用户程序
+    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_NE, (scmp_datum_t)(config->exePath.c_str()))) != 0) {
+        return false;
+    }
 
+//    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(open), 1, SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_WRONLY, O_WRONLY)) != 0) {
+//        return false;
+//    }
+//    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(open), 1, SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_RDWR, O_RDWR)) != 0) {
+//        return false;
 //    }
 
     if(seccomp_load(ctx) != RV_OK){
@@ -160,14 +153,16 @@ bool SubProcess::restrainSystemCall() {
 }
 
 
-void SubProcess::redirectIO() {
+int SubProcess::redirectIO() {
     if(!config->testInPath.empty()){
         FILE* inputFile = fopen(config->testInPath.c_str(),"r");
         if(inputFile== nullptr){
             DEBUG_PRINT("文件打开错误!");
+            return false;
         }
         if((dup2(fileno(inputFile),fileno(stdin)) == -1)){
             DEBUG_PRINT("重定向错误！");
+            return false;
         }
     }
 
@@ -180,10 +175,5 @@ void SubProcess::redirectIO() {
             DEBUG_PRINT("重定向错误！");
         }
     }
-
-}
-
-void SubProcess::xcpuSignalHandler(int sig) {
-    DEBUG_PRINT("SIGUSER1");
-    kill(getpid(),SIGUSR1); //通知父进程
+    return true;
 }

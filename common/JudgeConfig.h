@@ -36,8 +36,6 @@ public:
 
     ResourceLimit requiredResourceLimit; //题目要求的资源限制值
     ResourceLimit usedResourceLimit; //程序实际所用资源
-
-    WholeResult wholeResult; //所有评判结果
 };
 
 #endif //JUDGERTOTEACHING_JUDGECONFIG_H

@@ -15,8 +15,10 @@ private:
     FILE* openedReadFiles[MAX_TEST_FILE_NUMBER]{nullptr};
     FILE* openedWriteFiles[MAX_TEST_FILE_NUMBER]{nullptr};
     scmp_filter_ctx ctx; // 系统调用过滤规则
+    int pid = -1;
+    int initSuccess = true;
 public:
-    explicit SubProcess(JudgeConfig* cfg);
+    explicit SubProcess(JudgeConfig* cfg,int pid);
     ~SubProcess(); // 因为execve成功执行时不会返回,所以这破函数基本没啥用
 
     static void xcpuSignalHandler(int sig);
@@ -31,15 +33,15 @@ private:
     /**
     * 设置资源限制的函数
     */
-    void setResourceLimit();
+    int setResourceLimit();
 
     /**
      * 限制系统调用
      * @return
      */
-    bool restrainSystemCall();
+    int restrainSystemCall();
 
-    void redirectIO();
+    int redirectIO();
 };
 
 

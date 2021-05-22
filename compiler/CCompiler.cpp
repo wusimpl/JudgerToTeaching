@@ -61,7 +61,6 @@ CompileResult CCompiler::compile() {
         }
     }else{
         compileResult.status = CompileResult::CompileStatus::SE;
-        cfg->wholeResult.errorCode = WholeResult::SE;
         compileResult.errnoValue = errno;
     }
 
