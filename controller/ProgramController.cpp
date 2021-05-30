@@ -46,7 +46,7 @@ ControllerResult ProcessController::run() {
     }else if (subPid > 0){ // 父进程代码
 //        DEBUG_PRINT("父进程 running!!");
 //        DEBUG_PRINT("sub pid:" << subPid);
-        usleep(1000);
+
         if(config->requiredResourceLimit.realTime == UNLIMITED){
             DEBUG_PRINT("Danger! cpu time is unlimited, force to 1 minute.")
             config->requiredResourceLimit.realTime = 1 * minutes; //最多让其运行1分钟
@@ -107,7 +107,7 @@ ControllerResult ProcessController::run() {
                         gettimeofday(&end, nullptr);
                         controllerResult.usedResourceLimit.realTime =  (TIME_VALUE(end) - TIME_VALUE(start))/1000;
                         controllerResult.usedResourceLimit.cpuTime = R_CPU_TIME(resourceUsage)/1000;
-                        //十分不精确的测量，已弃用，使用/proc/[pid]/status实现
+                        //不精确的测量，已弃用，使用/proc/[pid]/status实现
 //                        controllerResult.usedResourceLimit.memory = resourceUsage.ru_maxrss;
 //                        controllerResult.usedResourceLimit.stack = resourceUsage.ru_isrss;
                         controllerResult.usedResourceLimit.outputSize = 0;
@@ -129,7 +129,7 @@ ControllerResult ProcessController::run() {
                     } else if (WIFSIGNALED(wstatus)) { // terminated by a signal
                         DEBUG_PRINT("terminated signal:" << WTERMSIG(wstatus));
                         switch (WTERMSIG(wstatus)) {
-                            case SIGXFSZ: // 写入文件的数据超限会发送次信号
+                            case SIGXFSZ: // 写入文件的数据超限会发送此信号
                                 DEBUG_PRINT("OLE");
                                 controllerResult.status = 5; // OLE
                                 break;
@@ -168,13 +168,13 @@ ControllerResult ProcessController::run() {
                                 SIGSEGVKilled = true;
                                 controllerResult.status = 4; // MLE
                                 break;
-                            case SIGABRT:
-                                kill(subPid,SIGKILL);
-                                DEBUG_PRINT("运行时错误，异常终止");
-                                SIGABRTKilled = true;
-                                controllerResult.status = 6; // RE
+//                            case SIGABRT:
+//                                kill(subPid,SIGKILL);
+//                                DEBUG_PRINT("运行时错误，异常终止");
+//                                SIGABRTKilled = true;
+//                                controllerResult.status = 6; // RE
                             case SIGCONT:
-                                DEBUG_PRINT("开始运行用户程序");
+//                                DEBUG_PRINT("开始运行用户程序");
                                 break;
                             case SIGSTOP: // 子进程阻塞了自己，运行到这里子进程就可以开始运行用户代码了
                                 gettimeofday(&start, nullptr);

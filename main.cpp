@@ -82,6 +82,10 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
     JNI_NOT_NULL(testInPath);
     nativeCfg.testInPath = JstrToCstr(testInPath);
 
+    jstring seccompFilterFilePath = JNI_INSTANCE_STRING_FIELD_VALUE(javaJudgeConfig,"seccompFilterFilePath");
+    JNI_NOT_NULL(seccompFilterFilePath);
+    nativeCfg.seccompFilterFilePath = JstrToCstr(seccompFilterFilePath);
+
 //    jstring testOutPath = JNI_INSTANCE_STRING_FIELD_VALUE(javaJudgeConfig, "testOutPath");
 //    JNI_NOT_NULL(testOutPath);
 //    nativeCfg.testOutPath = JstrToCstr(testOutPath);
@@ -93,6 +97,8 @@ JNIEXPORT jobject JNICALL Java_com_cqjtu_ets_onlinejudge_jni_JniApplication_run
     jstring outputFilePath = JNI_INSTANCE_STRING_FIELD_VALUE(javaJudgeConfig, "outputFilePath");
     JNI_NOT_NULL(outputFilePath);
     nativeCfg.outputFilePath = JstrToCstr(outputFilePath);
+
+
 
     //程序命令行参数
     jobjectArray programArgs = (jobjectArray)env->GetObjectField(javaJudgeConfig,env->GetFieldID(javaCfgCls,"programArgs","[Ljava/lang/String;"));

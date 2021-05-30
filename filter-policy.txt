@@ -1,0 +1,14 @@
+POLICY A{
+    ALLOW {
+        execve,brk,arch_prctl,access,
+        openat,mmap,close,pread64,SYSCALL[5],
+        mprotect,munmap,exit_group,kill,read,write,lseek
+    },
+    ALLOW {
+        kill(pid,sig){
+            pid == [pid]
+        }
+    }
+}
+
+USE A DEFAULT KILL

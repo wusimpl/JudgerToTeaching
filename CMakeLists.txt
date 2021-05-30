@@ -33,19 +33,20 @@ message("***********************************************************************
 #添加pthread库，seccomp库
 link_libraries(seccomp)
 link_libraries(pthread)
+link_libraries(kafel)
 #判断编译器类型,如果是gcc编译器,则在编译选项中加入c++11支持
 if(CMAKE_COMPILER_IS_GNUCXX)
-    set(CMAKE_CXX_FLAGS "-std=c++11 -g ${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 endif(CMAKE_COMPILER_IS_GNUCXX)
 set(CMAKE_CXX_FLAGS " ${CMAKE_CXX_FLAGS}")
 include_directories(/usr/lib/jvm/java-8-openjdk-amd64/include/) # jni头文件
 include_directories(/usr/lib/jvm/java-8-openjdk-amd64/include/linux)
 message("************************************************************************************************************************************************************")
 #execute_process(COMMAND rm -r ${configDir})
-add_executable(JudgeToTeaching main.cpp compiler/Compiler.h common/Util.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h controller/ProgramController.cpp controller/ProgramController.h common/Util.cpp controller/Pipe3.cpp controller/Pipe3.h common/Result.cpp common/Result.h common/ConfigurationTool.cpp common/ConfigurationTool.h common/JudgeConfig.cpp common/JudgeConfig.h common/Macro.h common/CharsetUtil.cpp common/CharsetUtil.h jni/jnimacro.h controller/SeccompRules.h controller/SeccompRules.cpp)
+add_executable(JudgeToTeaching main.cpp compiler/Compiler.h common/Util.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h controller/ProgramController.cpp controller/ProgramController.h common/Util.cpp controller/Pipe3.cpp controller/Pipe3.h common/Result.cpp common/Result.h common/ConfigurationTool.cpp common/ConfigurationTool.h common/JudgeConfig.cpp common/JudgeConfig.h common/Macro.h common/CharsetUtil.cpp common/CharsetUtil.h jni/jnimacro.h)
 
 set(LIBRARY_OUTPUT_PATH "/root/IdeaProjects/ets/lib")
-add_library(judge SHARED main.cpp compiler/Compiler.h common/Util.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h controller/ProgramController.cpp controller/ProgramController.h common/Util.cpp controller/Pipe3.cpp controller/Pipe3.h common/Result.cpp common/Result.h common/ConfigurationTool.cpp common/ConfigurationTool.h common/JudgeConfig.cpp common/JudgeConfig.h common/Macro.h common/CharsetUtil.cpp common/CharsetUtil.h jni/jnimacro.h controller/SeccompRules.h controller/SeccompRules.cpp)
+add_library(judge SHARED main.cpp compiler/Compiler.h common/Util.h compiler/CCompiler.cpp compiler/CCompiler.h compiler/CXXCompiler.cpp compiler/CXXCompiler.h checker/AnswerChecker.cpp checker/AnswerChecker.h controller/SubProcess.cpp controller/SubProcess.h controller/ProgramController.cpp controller/ProgramController.h common/Util.cpp controller/Pipe3.cpp controller/Pipe3.h common/Result.cpp common/Result.h common/ConfigurationTool.cpp common/ConfigurationTool.h common/JudgeConfig.cpp common/JudgeConfig.h common/Macro.h common/CharsetUtil.cpp common/CharsetUtil.h jni/jnimacro.h)
 
 install(TARGETS judge
         EXPORT judgeStaticLibTarget

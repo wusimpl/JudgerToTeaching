@@ -4,11 +4,13 @@
 
 #include "SubProcess.h"
 #include <sys/ptrace.h>
-#include "SeccompRules.h"
-#include <signal.h>
-#include <fcntl.h>
-#define AddSysCallRule(sysCallNumber) \
-    seccomp_rule_add(ctx,config->fileType==WHITE_LIST_MODE?SCMP_ACT_ALLOW:SCMP_ACT_KILL,sysCallNumber,0)
+#include <csignal>
+#include <iostream>
+#include <ostream>
+//#include "seccomp-bpf.h"
+#include <seccomp.h>
+#include "kafel.h"
+#include <sys/prctl.h>
 
 SubProcess::SubProcess(JudgeConfig *cfg,int processId):config(cfg) {
     //变量初始化
@@ -24,7 +26,7 @@ SubProcess::SubProcess(JudgeConfig *cfg,int processId):config(cfg) {
     //重定向输入输出
     initSuccess = redirectIO();
     //配置系统调用过滤规则
-    initSuccess = restrainSystemCall();
+    initSuccess = restrainSystemCall1();
 }
 
 int SubProcess::setResourceLimit() {
@@ -33,7 +35,7 @@ int SubProcess::setResourceLimit() {
     if(config->requiredResourceLimit.memory != UNLIMITED){ // in KB
         // in bytes
         rlimit as = {static_cast<rlim_t>(config->requiredResourceLimit.memory*KB), static_cast<rlim_t>(config->requiredResourceLimit.memory*KB*2)}; //max memory size
-        DEBUG_PRINT("限制内存大小"<<config->requiredResourceLimit.memory*KB<<"bytes");
+//        DEBUG_PRINT("限制内存大小"<<config->requiredResourceLimit.memory*KB<<"bytes");
         if(SetRLimit_X(AS,as) != 0){
             DEBUG_PRINT("资源限制错误!");
             return false;
@@ -44,7 +46,7 @@ int SubProcess::setResourceLimit() {
     if(config->requiredResourceLimit.cpuTime != UNLIMITED){ // cpu time:in seconds
         // in seconds
         rlimit cpu = {unsigned(config->requiredResourceLimit.cpuTime/1000), unsigned(config->requiredResourceLimit.cpuTime/200)};
-        DEBUG_PRINT(cpu.rlim_cur<<" "<<cpu.rlim_max);
+//        DEBUG_PRINT(cpu.rlim_cur<<" "<<cpu.rlim_max);
         if(SetRLimit_X(CPU,cpu) != 0){
             DEBUG_PRINT("资源限制错误!");
             return false;
@@ -106,36 +108,46 @@ SubProcess::~SubProcess() {
 }
 
 int SubProcess::restrainSystemCall() {
-    int syscallWhiteList[] = {
-            SCMP_SYS(write),SCMP_SYS(read), // allow printf and write
-            SCMP_SYS(mmap), SCMP_SYS(munmap),SCMP_SYS(brk), // allow memory allocation and free
-            SCMP_SYS(exit_group),SCMP_SYS(rt_sigreturn), // allow exit
-            SCMP_SYS(clock_gettime) // allow get time
-    };
 
-    ctx = seccomp_init(SCMP_ACT_KILL); // init
-
-    if(ctx == nullptr){
-        DEBUG_PRINT("seccomp初始化失败");
+    if((ctx = seccomp_init(SCMP_ACT_TRAP)) == nullptr){
+        DEBUG_PRINT("seccomp init failed!");
         return false;
     }
-
-    //必须允许的系统调用
-    int rv;
-    for (int i = 0; i < sizeof(syscallWhiteList); ++i) {
-        rv = seccomp_rule_add(ctx,SCMP_ACT_ALLOW,syscallWhiteList[i],0);
-        if(rv!=0){
+    int sysCallWhiteList[] = {
+//                SCMP_SYS(execve),
+            SCMP_SYS(brk),
+            SCMP_SYS(arch_prctl),SCMP_SYS(access),
+            SCMP_SYS(openat),SCMP_SYS(close),SCMP_SYS(mmap),SCMP_SYS(munmap),
+            SCMP_SYS(mprotect),
+//                SCMP_SYS(write),SCMP_SYS(read),
+            SCMP_SYS(exit_group),SCMP_SYS(fstat), SCMP_SYS(pread64)
+    };
+    for (int i = 0; i < sizeof sysCallWhiteList; ++i) {
+        if(seccomp_rule_add(ctx,SCMP_ACT_ALLOW,sysCallWhiteList[i],0) != RV_OK){
+            DEBUG_PRINT("seccomp init failed!");
             return false;
         }
     }
-    //allow subprocess to stop itself.
-    seccomp_rule_add(ctx,SCMP_ACT_ALLOW, SCMP_SYS(kill),2,
-                     SCMP_A0( SCMP_CMP_EQ, static_cast<scmp_datum_t>(pid) ),
-                     SCMP_A1( SCMP_CMP_EQ, (scmp_datum_t)SIGSTOP ) );
     //允许执行用户程序
-    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(execve), 1, SCMP_A0(SCMP_CMP_NE, (scmp_datum_t)(config->exePath.c_str()))) != 0) {
+    if(seccomp_rule_add(ctx,
+                     SCMP_ACT_ALLOW,
+                     SCMP_SYS(execve),
+                     1,
+                     SCMP_A0(SCMP_CMP_EQ, (scmp_datum_t) config->exePath.c_str())) != RV_OK){
+        DEBUG_PRINT("seccomp init failed!");
         return false;
     }
+    //allow subprocess to stop itself.
+    if(seccomp_rule_add(ctx,
+                     SCMP_ACT_ALLOW,
+                     SCMP_SYS(kill),
+                     2,
+                     SCMP_A0( SCMP_CMP_EQ, static_cast<scmp_datum_t>(pid) ),
+                     SCMP_A1( SCMP_CMP_EQ, (scmp_datum_t)SIGSTOP ) ) != RV_OK){
+        DEBUG_PRINT("seccomp init failed!");
+        return false;
+    }
+
 
 //    if (seccomp_rule_add(ctx, SCMP_ACT_KILL, SCMP_SYS(open), 1, SCMP_CMP(1, SCMP_CMP_MASKED_EQ, O_WRONLY, O_WRONLY)) != 0) {
 //        return false;
@@ -152,7 +164,57 @@ int SubProcess::restrainSystemCall() {
     return true;
 }
 
+int SubProcess::restrainSystemCall1() {
+    string seccomp_policy;
+    char buf[1024];
+    const char* fileName = config->seccompFilterFilePath.c_str();
+    fstream file(fileName);
+    if(!file.is_open()){
+        return -1;
+    }
+    string temp;
+    while(getline(file,temp)){
+        seccomp_policy+=temp;
+    }
+    file.close();
+    if(seccomp_policy.find("[pid]") != string::npos){
+        seccomp_policy = seccomp_policy.replace( seccomp_policy.find("[pid]"),5,std::to_string(pid) );
+    }
+    struct sock_fprog prog;
+    kafel_ctxt_t ctxt = kafel_ctxt_create();
+    kafel_set_input_string(ctxt, seccomp_policy.c_str());
+    if (kafel_compile(ctxt, &prog)) {
+        fprintf(stderr, "policy compilation failed: %s", kafel_error_msg(ctxt));
+        kafel_ctxt_destroy(&ctxt);
+        return false;
+    }
+    kafel_ctxt_destroy(&ctxt);
+    prctl(PR_SET_NO_NEW_PRIVS,1,0,0,0);
+    prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog, 0, 0);
+    free(prog.filter);
+    return true;
+}
 
+int SubProcess::restrainSystemCall2(){
+    DEBUG_PRINT(SCMP_SYS(execve));
+    struct sock_filter execve_filter[] = {
+            BPF_STMT(BPF_LD+BPF_W+BPF_ABS,0),
+            BPF_JUMP(BPF_JMP+BPF_JEQ, SCMP_SYS(execve),0,1),
+            BPF_STMT(BPF_RET+BPF_K,SECCOMP_RET_KILL),
+            BPF_STMT(BPF_RET+BPF_K,SECCOMP_RET_ALLOW),
+    };
+
+    sock_fprog fprog = {
+            (sizeof(execve_filter)/sizeof (execve_filter[0])),
+            execve_filter
+    };
+    prctl(PR_SET_NO_NEW_PRIVS,1,0,0,0);
+    if(prctl(PR_SET_SECCOMP,SECCOMP_MODE_FILTER,&fprog) != RV_OK){
+        DEBUG_PRINT("load seccomp failed!");
+    }
+
+    return true;
+}
 int SubProcess::redirectIO() {
     if(!config->testInPath.empty()){
         FILE* inputFile = fopen(config->testInPath.c_str(),"r");
@@ -170,9 +232,11 @@ int SubProcess::redirectIO() {
         FILE* outputFile = fopen(config->outputFilePath.c_str(),"w");
         if(outputFile== nullptr){
             DEBUG_PRINT("文件打开错误!");
+            return false;
         }
         if(dup2(fileno(outputFile),fileno(stdout)) == -1){
             DEBUG_PRINT("重定向错误！");
+            return false;
         }
     }
     return true;

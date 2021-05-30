@@ -80,7 +80,8 @@ int getLine(FILE* file,vector<UTF8UnitWT*>* units){
         rv = getNextUTF8UnitWT(file,unitWT);
 
         if (rv == 0){ // 正常
-            if (unitWT->unit.b1 == '\n') {
+            if (unitWT->unit.b1 == '\n' || unitWT->unit.b1 == '\r') {
+                getNextUTF8UnitWT(file,unitWT); // get the next char '\n' rather than the previous '\r'
                 units->push_back(unitWT);
                 return RV_OK;
             } else { // 非换行符
@@ -89,7 +90,7 @@ int getLine(FILE* file,vector<UTF8UnitWT*>* units){
             }
         } else if(rv == -2){ //　文件尾
             delete unitWT;
-            return RV_OK;
+            return RV_END;
         }else{ // rv == -1 (error)
             delete unitWT;
             return RV_ERROR;

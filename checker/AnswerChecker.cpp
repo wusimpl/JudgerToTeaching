@@ -4,6 +4,7 @@
 
 #include "AnswerChecker.h"
 #include <utility>
+#define RV_END (-2)
 
 AnswerChecker::AnswerChecker(string stdPath1, string testPath2) {
     textGroup1 = getFilesOfDirWithFullPath(std::move(stdPath1));
@@ -81,8 +82,10 @@ CompareResult* AnswerChecker::compareByTextByLine(const char *standardTextPath, 
             fclose(stdFile);
             fclose(checkFile);
             return compareResult;
+        }else if(rv1 == RV_END || rv2 == RV_END){ //到达文件尾
+            break;
         }
-        compareResult->lineNumber++;
+
         auto* detail = new CompareDetail();
         if(detail == nullptr){
             DEBUG_PRINT("对比时内存不足！");
@@ -93,6 +96,7 @@ CompareResult* AnswerChecker::compareByTextByLine(const char *standardTextPath, 
         p1=0,p2=0;
         len1 = units1.size();
         len2 = units2.size();
+        compareResult->lineNumber++;
         /**
          * 对比算法：stdP与testP相同?匹配字:(testP在stdP后续中存在?(stdP到后续是缺失字):(testP是多余字))
          *  text1 = """我们班里喜欢数学的学生大多数是女生。"""

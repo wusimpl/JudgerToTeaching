@@ -6,6 +6,7 @@
 #define JUDGERTOTEACHING_CHARSETUTIL_H
 
 #include "../common/Macro.h"
+#define RV_END (-2)
 
 typedef unsigned char byte;
 #define EndOfFile(filePtr) (feof(filePtr) == 0 ? false : true)
